@@ -55,7 +55,7 @@ Supported **SAP_PRODUCT_ID**, as per AWS Launch Wizard for SAP
 ### Initialize
 
 ```bash
-cd $home
+cd /
 mkdir aws-sap-automation
 cd aws-sap-automation
 aws s3 cp s3://aws-sap-automation/software_download/ ./software_download --recursive
