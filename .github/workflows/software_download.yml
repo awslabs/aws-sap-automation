@@ -36,10 +36,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: test
         run: |
-          apk update && apk add bash
-          apk add wget
-          apk add --no-cache --upgrade grep
-          apk --no-cache add aws-cli
           aws --version
           chmod +x utils/colors.sh
           chmod +x utils/lw_bootstrap.sh 
@@ -60,6 +56,5 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: deploy
         run: |
-          apk --no-cache add aws-cli
           aws --version
           aws s3 cp . s3://aws-sap-automation/ --recursive --exclude ".*"
