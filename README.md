@@ -1,17 +1,15 @@
-## My Project
+# AWS Launch Wizard for SAP - Automation
 
-TODO: Fill this README out!
+Collection of bash scripts, that can be used alongside AWS Launch Wizard for SAP to automate the following tasks:
 
-Be sure to:
+- **[SAP Software Download](software_download/):** Fetches all required artifacts from SAP Support Launchpad - requires SAP-S-User to be maintained in AWS Secrets Manager
 
-* Change the title in this README
-* Edit your repository description on GitHub
+## Found an issue? Anything to add?
 
-## Security
-
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING](CONTRIBUTING.md) for more information.
 
 ## License
 
-This project is licensed under the Apache-2.0 License.
-
+This project is licensed under  [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](.LICENSE)
+  
+All rights reserved.
