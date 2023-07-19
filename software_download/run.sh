@@ -11,8 +11,8 @@ cd $home
 mkdir aws-sap-automation
 cd aws-sap-automation
 
-aws s3 cp s3://aws-sap-automation/software_download/ . --recursive
-aws s3 cp s3://aws-sap-automation/utils/ . --recursive
+aws s3 cp s3://aws-sap-automation/software_download/ ./software_download --recursive
+aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive
 chmod +x utils/colors.sh
 chmod +x utils/lw_bootstrap.sh
 chmod +x software_download/lw_software_download.sh
