@@ -1,0 +1,40 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Bootstrap",
+            "Effect": "Allow",
+            "Action": "autoscaling:DescribeAutoScalingInstances",
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecretsManager",
+            "Effect": "Allow",
+            "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+            "Resource": "arn:aws:secretsmanager:*:*:secret:sap-s-user*"
+        },
+        {
+            "Sid": "SecretsManagerDecryptSecret",
+            "Effect": "Allow",
+            "Action": ["kms:Decrypt", "kms:DescribeKey"],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                "kms:RequestAlias": "alias/aws*secretsmanager"
+                }
+            }
+        },
+        {
+            "Sid": "aws-sap-automation",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::aws-sap-automation",
+                "arn:aws:s3:::aws-sap-automation/*"
+            ]
+        }
+    ]
+}
