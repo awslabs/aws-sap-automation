@@ -20,15 +20,17 @@ In section **Pre-deployment configuration script**, choose the following Amazon 
 s3://aws-sap-automation/software_download/run.sh
 ```
 
-Specify the **SAP application software location** - suggested naming convention:
+Make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
+
+![image](lw_pre_script.png)
+
+Next, specify the **SAP application software location** - suggested naming convention:
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SAPCAR
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SWPM
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/KERNEL
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/EXPORT
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADB
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADBCLIENT
-
-Make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
 
 Supported **SAP_PRODUCT_ID**, as per AWS Launch Wizard for SAP
 
