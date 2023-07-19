@@ -41,7 +41,6 @@ jobs:
           apk add --no-cache --upgrade grep
           apk --no-cache add aws-cli
           aws --version
-          export AWS_DEFAULT_REGION=eu-central-1
           chmod +x utils/colors.sh
           chmod +x utils/lw_bootstrap.sh 
           chmod +x software_download/lw_software_download.sh
@@ -63,5 +62,4 @@ jobs:
         run: |
           apk --no-cache add aws-cli
           aws --version
-          export AWS_DEFAULT_REGION=eu-central-1
           aws s3 cp . s3://aws-sap-automation/ --recursive --exclude ".*"
