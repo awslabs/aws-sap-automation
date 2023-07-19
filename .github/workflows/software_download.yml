@@ -8,7 +8,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'software_download/**'
+      - 'software_download/lw_software_download*'
   pull_request:
     branches: [ "main" ]
 
