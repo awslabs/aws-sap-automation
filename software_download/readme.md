@@ -1,14 +1,15 @@
 # SAP Software Download
 
-Fetches all required artifacts from SAP Support Launchpad. Note: Requires valid SAP-S-User to be maintained in AWS Secrets Manager.
+Fetches all required artifacts from SAP Software Center.   
+**Note:** Requires valid SAP-S-User to be maintained in AWS Secrets Manager.
 
 ## Prerequisites (Once only)
 
-- Create new Amazon S3 Bucket 'launchwizard-`<AccountID>`'
-- Create and attach the provided [IAM Policy](iam_policy.json) to role 'AmazonEC2RoleForLaunchWizard'
-- Create a new secret called **'sap-s-user'** in AWS Secrets Manager (use default AWS Managed KMS key)
-  - Store S-User -> property 'username'
-  - Store Password -> property 'password'
+- Create new Amazon S3 Bucket e.g. **launchwizard-`<AWSAccountID>`**
+- Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
+- Create a new secret called **sap-s-user** in AWS Secrets Manager (use default AWS Managed KMS key)
+  - Store S-User -> property **username**
+  - Store Password -> property **password**
 - (Optional) Create VPC Endpoint for S3 for faster upload to S3 and to save on data transfer costs
 
 ## Usage via AWS Launch Wizard for SAP
