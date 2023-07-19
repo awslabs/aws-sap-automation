@@ -97,7 +97,7 @@ Example:
 
 ## How to update SWDC Links
 
-- Go to [SAP Support Launchpad](https://launchpad.support.sap.com/) -> Downloads
+- Go to [SAP Support Launchpad](https://me.sap.com/softwarecenter)
 - Search for file(s) e.g. SWPM
 - Filter by **Linux on x86_64 64bit**
 - Locate latest file and click on **Content Info**
