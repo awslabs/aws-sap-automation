@@ -103,6 +103,16 @@ HANADB_LATEST_MD5="7364bd72e6acd393f9198397476c4f5dd855eb2c764081837595fe77d1ef5
 HANACLIENT_LATEST="https://softwaredownloads.sap.com/file/0020000000816452023"                # IMDB_CLIENT20_017_21-80002082.SAR - SAP HANA CLient 2.17
 HANACLIENT_LATEST_MD5="3ae8823a6075cc3a5f6087e400d9a27a44909383fb0fe9677f92f1133ca62a32"
 
+### SWPM_1_0
+SWPM_1_0_SWPM=${SWPM_1_0}                                                                         
+SWPM_1_0_SWPM_MD5=${SWPM_1_0_MD5} 
+
+
+### SWPM_2_0
+SWPM_2_0_SWPM=${SWPM_2_0}                                                                         
+SWPM_2_0_SWPM_MD5=${SWPM_2_0_MD5} 
+
+
 ### NetWeaver 7.50
 NW750_SAPCAR=${SAPCAR}                                                                     
 NW750_SAPCAR_MD5=${SAPCAR_MD5}
@@ -676,6 +686,16 @@ echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
 # --- Getting files for the chosen SAP product ---
 
 case $SAP_PRODUCT_ID in
+
+  "swpm1")
+     PRODUCT_PREFIX="SWPM_1_0"
+     EXPORTS=0
+  ;;
+
+  "swpm2")
+     PRODUCT_PREFIX="SWPM_2_0"
+     EXPORTS=0
+  ;;
 
   "sapNetweaver-750")
      PRODUCT_PREFIX="NW750"

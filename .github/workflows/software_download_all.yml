@@ -1,6 +1,4 @@
-# This is a basic workflow to help you get started with Actions
-
-name: Test
+name: All software
 
 # Controls when the workflow will run
 on:
@@ -56,7 +54,7 @@ jobs:
           ./software_download/lw_software_download.sh validate sapsolman-7.2
           
       # Runs a set of commands using the runners shell
-      - name: deploy
-        run: |
-          aws --version
-          aws s3 cp . s3://aws-sap-automation/ --recursive --exclude ".*"
+      #- name: deploy
+      #  run: |
+      #    aws --version
+      #    aws s3 cp . s3://aws-sap-automation/ --recursive --exclude ".*"
