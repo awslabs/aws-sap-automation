@@ -1,6 +1,6 @@
-# AWS Launch Wizard for SAP - Automation
+# SAP Automation Scripts
 
-Collection of scripts, that can be used alongside AWS Launch Wizard for SAP to automate the following tasks:
+Collection of scripts, that can be used primarily with **AWS Launch Wizard for SAP** to automate the following tasks:
 
 | Feature  | Status | Description |
 | ------------- | ------------- | ------------- |
