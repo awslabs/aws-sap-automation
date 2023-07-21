@@ -4,7 +4,7 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 
 | Feature  | Status | Description |
 | ------------- | ------------- | ------------- |
-| **[SAP Software Download](software_download/)**   | [![All software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) [![SWPM](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_SWPM.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_SWPM.yml) | Fetches all required artifacts from SAP Software Center - requires SAP-S-User to be maintained in AWS Secrets Manager  |
+| **[SAP Software Download](software_download/)**   | [![All software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) [![SWPM](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_SWPM.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_SWPM.yml) | Fetches all required artifacts from SAP Software Center to execute AWS Launch Wizard for SAP deployments |
 
 ## Found an issue? Anything to add?
 
