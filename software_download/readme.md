@@ -1,6 +1,6 @@
 # SAP Software Download
 
-Fetches all required artifacts from SAP Software Center.   
+Fetches all required artifacts from SAP Software Center to execute AWS Launch Wizard for SAP deployments.
 **Note:** Requires valid SAP-S-User to be maintained in AWS Secrets Manager.
 
 ## Prerequisites (Once only)
@@ -114,7 +114,7 @@ Example:
 
 ## Considerations
 
-- **SAP S-User passwords expire after 6 months** and have to be changed in the SAP Support Portal, otherwise the script will throw a "Username/Password Authentication Failed." error
+- **SAP S-User passwords expire after 6 months** and have to be changed in the SAP Me Portal, otherwise the script will throw a "Username/Password Authentication Failed." error
 - SAP Installation files are currently being **downloaded into the DB instance’s provisioned Amazon EFS share for staging**, folder name is “/media/LaunchWizard-<LW_Deployment_Name>". Each file is uploaded immediately after download, and then deleted from the local storage. This should work for all stacks as the largest file is currently the HANA binary (14.3 GB).
 - Certain download links like **SAPCAR**, **SWPM** and **HANADB** should be checked frequently due to SAP taking the files offline as soon as new patch levels are released. Links to the DVD installer files are more stable but will be taken offline as well once the respective product is being deprecated
 - Download links for the various software products have been taken from https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-software-install-details.html. For some components, newer versions have been considered.
