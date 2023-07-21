@@ -39,4 +39,4 @@ jobs:
           StackName=LaunchWizard-S4TESTRUN-$Timestamp
           UniqueID=$Timestamp
           echo $Timestamp
-          aws cloudformation deploy --stack-name $StackName --template-file S4TESTRUN1-SapNWOnHanaSingle-template.json --parameter-overrides HANAMasterPassKey= ${{ secrets.HANAMasterPassKey }},Timestamp=$Timestamp,UniqueID=$UniqueID  --s3-bucket ${{ secrets.STAGING_S3 }} --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM CAPABILITY_IAM
+          aws cloudformation deploy --stack-name $StackName --template-file S4TESTRUN1-SapNWOnHanaSingle-template.json --parameter-overrides HANAMasterPassKey=${{ secrets.HANAMasterPassKey }},Timestamp=$Timestamp,UniqueID=$UniqueID  --s3-bucket ${{ secrets.STAGING_S3 }} --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM CAPABILITY_IAM
