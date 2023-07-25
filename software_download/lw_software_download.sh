@@ -7,6 +7,9 @@
 #EXECUTE: Can be run standalone or via AWS Launch Wizard for SAP
 #AUTHOR: meyro@, mtoerpe@
 
+#MACOSX COMPATIBILITY
+function sha256sum() { openssl sha256 "$@" | awk '{print $2}'; }
+
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source "$DIR/../utils/colors.sh"
 
