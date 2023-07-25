@@ -35,8 +35,7 @@ jobs:
         run: |
           aws --version
           aws s3 cp s3://${{ secrets.STAGING_S3 }}/S4TESTRUN1-1689931791648/ ./ --recursive
-          Timestamp=$(date +%s)
-          StackName=LaunchWizard-S4TESTRUN-$Timestamp
-          UniqueID=$Timestamp
-          echo $Timestamp
-          aws cloudformation deploy --stack-name $StackName --template-file S4TESTRUN1-SapNWOnHanaSingle-template.json --parameter-overrides HANAMasterPassKey=${{ secrets.HANAMasterPassKey }} Timestamp=$Timestamp UniqueID=$UniqueID  --s3-bucket ${{ secrets.STAGING_S3 }} --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM CAPABILITY_IAM
+          MyTimestamp=$(date +%s)
+          StackName=LaunchWizard-S4TESTRUN-$MyTimestamp
+          echo $MyTimestamp
+          aws cloudformation deploy --stack-name $StackName --template-file S4TESTRUN1-SapNWOnHanaSingle-template.json --parameter-overrides Timestamp=$MyTimestamp HANAMasterPassKey="${{ secrets.HANAMasterPassKey }}" --s3-bucket ${{ secrets.STAGING_S3 }} --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM CAPABILITY_IAM
