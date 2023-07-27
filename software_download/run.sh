@@ -8,7 +8,7 @@
 #AUTHOR: mtoerpe@
 
 cd /
-mkdir aws-sap-automation
+mkdir -p aws-sap-automation
 cd aws-sap-automation
 
 aws s3 cp s3://aws-sap-automation/software_download/ ./software_download --recursive

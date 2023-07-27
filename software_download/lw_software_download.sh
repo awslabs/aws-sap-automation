@@ -48,7 +48,7 @@ fi
 
 if [[ $FLAG_VALIDATE != true && $FLAG_DOWNLOAD != true ]]
 then
-source ../utils/lw_bootstrap.sh
+source "$DIR/../utils/lw_bootstrap.sh"
 fi
 
 echo ""
