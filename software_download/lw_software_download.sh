@@ -97,8 +97,8 @@ SWPM_1_0_MD5="a29bcfaa12a9854db6078155a6f0f4ac317fd8c911a3dda4edf70dab1f2b7a8b"
 SWPM_2_0="https://softwaredownloads.sap.com/file/0020000000855532023"                        # SWPM20SP15_3-80003424.SAR      
 SWPM_2_0_MD5="52bcc81a58c3fbcf141e2bed8193f273ee74203ecf905006701d053c414114ee"
 
-HANADB_LATEST="https://softwaredownloads.sap.com/file/0030000000783582023"                    # 51056821.ZIP - SAP HANA Platform Edt. 2.0 SPS07 rev71 Linux x86_64
-HANADB_LATEST_MD5="7364bd72e6acd393f9198397476c4f5dd855eb2c764081837595fe77d1ef59e1"
+HANADB_LATEST="https://softwaredownloads.sap.com/file/0030000000895972023"                    # 51057071.ZIP - SAP HANA Platform Edt. 2.0 SPS07 rev71 Linux x86_64
+HANADB_LATEST_MD5="a9cc049b60812f4b2ede79bd9ff999ddff484dbdfab6dd9ebc4124e3552f1ca3"
 
 HANACLIENT_LATEST="https://softwaredownloads.sap.com/file/0020000000516362023"                # IMDB_CLIENT20_016_26-80002082.SAR - SAP HANA CLient 2.16
 HANACLIENT_LATEST_MD5="d238143b22ab5976221ab7d89b097690dd7af9fc75445c1f78eeb7196c569ca4"
@@ -117,6 +117,11 @@ SWPM_2_0_SWPM_MD5=${SWPM_2_0_MD5}
 ### HANA_CLIENT
 HANA_CLIENT_SWPM=${HANACLIENT_LATEST}                                                                         
 HANA_CLIENT_SWPM_MD5=${HANACLIENT_LATEST_MD5} 
+
+
+### HANA
+HANADB_SWPM=${HANADB_LATEST}                                                                         
+HANADB_SWPM_MD5=${HANADB_LATEST_MD5} 
 
 
 ### NetWeaver 7.50
@@ -701,8 +706,13 @@ case $SAP_PRODUCT_ID in
      EXPORTS=0
   ;;
 
-  "hana")
+  "hanaclient")
      PRODUCT_PREFIX="HANA_CLIENT"
+     EXPORTS=0
+  ;;
+
+  "hana")
+     PRODUCT_PREFIX="HANADB"
      EXPORTS=0
   ;;
 
