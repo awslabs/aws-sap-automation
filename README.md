@@ -8,7 +8,7 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 
 ## Found an issue? Anything to add?
 
-See [CONTRIBUTING](CONTRIBUTING.md) for more information.
+See [CONTRIBUTING](CONTRIBUTING.md) and [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) for more information.
 
 ## License
 
