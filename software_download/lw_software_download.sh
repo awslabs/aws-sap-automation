@@ -92,10 +92,10 @@ echo ""
 ### CHECK THESE LINKS FOR VALIDITY AS SAP FREQUENTLY DELETES OLDER VERSIONS FROM THE SAP SUPPORT PORTAL
 SAPCAR="https://softwaredownloads.sap.com/file/0020000000098642022"                          # SAPCAR_1115-70006178.EXE           
 SAPCAR_MD5="765412436934362cc5497e3d659fbb78be91093a091c11ec4fbe84dfb415a0e5"
-SWPM_1_0="https://softwaredownloads.sap.com/file/0020000000855242023"                        # SWPM10SP38_0-20009701.SAR        
-SWPM_1_0_MD5="a29bcfaa12a9854db6078155a6f0f4ac317fd8c911a3dda4edf70dab1f2b7a8b"
-SWPM_2_0="https://softwaredownloads.sap.com/file/0020000000855532023"                        # SWPM20SP15_3-80003424.SAR      
-SWPM_2_0_MD5="52bcc81a58c3fbcf141e2bed8193f273ee74203ecf905006701d053c414114ee"
+SWPM_1_0="https://softwaredownloads.sap.com/file/0020000000931222023"                        # SWPM10SP38_3-20009701.SAR        
+SWPM_1_0_MD5="15db80ba70800ffd356d48ef6791de16172daa3c5783e51b2c6d6461cae494fa"
+SWPM_2_0="https://softwaredownloads.sap.com/file/0020000000931532023"                        # SWPM20SP15_4-80003424.SAR      
+SWPM_2_0_MD5="8128c39f36559c31590ac2b445a3bbd983a43b497578a1f25b1896a62174106a"
 
 HANADB_LATEST="https://softwaredownloads.sap.com/file/0030000000895972023"                    # 51057071.ZIP - SAP HANA Platform Edt. 2.0 SPS07 rev71 Linux x86_64
 HANADB_LATEST_MD5="a9cc049b60812f4b2ede79bd9ff999ddff484dbdfab6dd9ebc4124e3552f1ca3"
