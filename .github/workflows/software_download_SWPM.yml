@@ -40,3 +40,4 @@ jobs:
           ./software_download/lw_software_download.sh validate swpm1
           ./software_download/lw_software_download.sh validate swpm2
           ./software_download/lw_software_download.sh validate hana
+          ./software_download/lw_software_download.sh validate hanaclient
