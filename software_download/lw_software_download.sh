@@ -827,7 +827,7 @@ then
       echo -n "Validating link for "${ITEM_VARIABLE}
       WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 0 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
-      if [[ $WGET_LAST_HTTP_RC != "200" ]] 
+      if [[ $WGET_LAST_HTTP_RC != "302" ]] # 200 
       then 
         echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
         exit 1
