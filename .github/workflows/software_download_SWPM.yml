@@ -3,9 +3,9 @@ name: SWPM
 
 # Controls when the workflow will run
 on:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron:  '15 7 * * 1-5'
+#  schedule:
+#    # * is a special character in YAML so you have to quote this string
+#    - cron:  '15 7 * * 1-5'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
