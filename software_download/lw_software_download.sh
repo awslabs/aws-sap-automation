@@ -90,7 +90,7 @@ echo ""
 # --- Read Download Links ---
 
 echo "Parsing Download Links"
-exec < links.csv
+exec < "$DIR/../software_download/links.csv"
 read header
 while IFS=";" read -r ID rec_column2 rec_column3 URL rec_column5 rec_column6 MD5 rec_remaining
 do
@@ -101,6 +101,9 @@ do
   declare ${ID}=$URL
   declare ${ID}_MD5=$MD5
 done
+echo -e " ${GREEN}...success!${NO_COLOR}"
+
+echo ""
 
 # --- Housekeeping variables ---
 
