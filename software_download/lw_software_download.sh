@@ -98,8 +98,8 @@ do
   #echo "$URL"
   #echo "$MD5"
   #echo ""
-  declare ${ID}=$URL
-  declare ${ID}_MD5=$MD5
+  declare ${ID}="$URL"
+  declare ${ID}_MD5="$MD5"
 done
 echo -e " ${GREEN}...success!${NO_COLOR}"
 
@@ -255,7 +255,7 @@ then
     # not all stacks necessarily have all the same technical foundation parts (e.g. SAPJVM is only valid for sapsolman-7.2 and sapNetweaverJavaOnly-750)
     if [[ $SWDC_URL != "" ]]
     then
-      echo -n "Validating link for "${ITEM_VARIABLE}
+      echo -n "Validating link " $SWDC_URL "for "${ITEM_VARIABLE}
       WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 0 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
       if [[ $WGET_LAST_HTTP_RC != "302" ]] # 200 
