@@ -89,10 +89,10 @@ echo ""
 
 # --- Read Download Links ---
 
-echo "Parsing Download Links"
+echo -n "Parsing Download Links"
 exec < "$DIR/../software_download/links.csv"
 read header
-while IFS=";" read -r ID rec_column2 rec_column3 URL rec_column5 rec_column6 MD5 rec_remaining
+while IFS=";" read -r ID column2 column3 URL column5 column6 MD5 remaining
 do
   #echo "$ID"
   #echo "$URL"
@@ -127,25 +127,25 @@ echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
 
 case $SAP_PRODUCT_ID in
 
-  "swpm1")
-     PRODUCT_PREFIX="SWPM_1_0"
-     EXPORTS=0
-  ;;
+  #"swpm1")
+  #   PRODUCT_PREFIX="SWPM_1_0"
+  #   EXPORTS=0
+  #;;
 
-  "swpm2")
-     PRODUCT_PREFIX="SWPM_2_0"
-     EXPORTS=0
-  ;;
+  #"swpm2")
+  #   PRODUCT_PREFIX="SWPM_2_0"
+  #   EXPORTS=0
+  #;;
 
-  "hanaclient")
-     PRODUCT_PREFIX="HANA_CLIENT"
-     EXPORTS=0
-  ;;
+  #"hanaclient")
+  #   PRODUCT_PREFIX="HANA_CLIENT"
+  #   EXPORTS=0
+  #;;
 
-  "hana")
-     PRODUCT_PREFIX="HANADB"
-     EXPORTS=0
-  ;;
+  #"hana")
+  #   PRODUCT_PREFIX="HANADB"
+  #   EXPORTS=0
+  #;;
 
   "sapNetweaver-750")
      PRODUCT_PREFIX="NW750"
