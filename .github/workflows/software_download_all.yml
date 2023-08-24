@@ -4,16 +4,16 @@ name: Download Links
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'software_download/lw_software_download*'
-  pull_request:
-    branches: [ "main" ]
+#  push:
+#    branches: [ "main" ]
+#    paths:
+#      - 'software_download/lw_software_download*'
+#  pull_request:
+#    branches: [ "main" ]
 
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '15 7 * * 1-5'
+    - cron:  '0 7 1,15 * *'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
