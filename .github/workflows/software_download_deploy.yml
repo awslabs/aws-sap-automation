@@ -30,4 +30,5 @@ jobs:
       - name: deploy
         run: |
           aws --version
+          aws s3 rm s3://aws-sap-automation/ --recursive
           aws s3 cp . s3://aws-sap-automation/ --recursive --exclude ".*"
