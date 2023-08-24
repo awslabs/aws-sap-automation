@@ -75,7 +75,7 @@ fi
 
 echo -n "Validating SAP S-User"
 CHECK_URL="https://softwaredownloads.sap.com/file/0020000001450632021" #SAPEXE_50-80005374.SAR from S/4HANA 2021
-RETURNCODE=`wget -q -r -U "SAP Download Manager" --max-redirect 0 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $CHECK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+RETURNCODE=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $CHECK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
 if [[ $RETURNCODE -ne 200 && $RETURNCODE -ne 302 ]]
 then 
@@ -256,9 +256,9 @@ then
     if [[ $SWDC_URL != "" ]]
     then
       echo -n "Validating link " $SWDC_URL "for "${ITEM_VARIABLE}
-      WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 0 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+      WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
-      if [[ $WGET_LAST_HTTP_RC != "302" ]] # 200 
+      if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
       then 
         echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
         exit 1
@@ -278,9 +278,9 @@ then
     SWDC_URL=`echo "${!ITEM_VARIABLE}"`
 
     echo -n "Validating link for "${ITEM_VARIABLE}
-    WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 0 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+    WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
-    if [[ $WGET_LAST_HTTP_RC != "302" ]] # 200 
+    if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
     then 
       echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
       exit 1
