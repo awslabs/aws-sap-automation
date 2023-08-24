@@ -127,25 +127,15 @@ echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
 
 case $SAP_PRODUCT_ID in
 
-  #"swpm1")
-  #   PRODUCT_PREFIX="SWPM_1_0"
-  #   EXPORTS=0
-  #;;
+  "swpm1")
+     PRODUCT_PREFIX="NW750"
+     EXPORTS=0
+  ;;
 
-  #"swpm2")
-  #   PRODUCT_PREFIX="SWPM_2_0"
-  #   EXPORTS=0
-  #;;
-
-  #"hanaclient")
-  #   PRODUCT_PREFIX="HANA_CLIENT"
-  #   EXPORTS=0
-  #;;
-
-  #"hana")
-  #   PRODUCT_PREFIX="HANADB"
-  #   EXPORTS=0
-  #;;
+  "swpm2")
+     PRODUCT_PREFIX="S4HANA22"
+     EXPORTS=0
+  ;;
 
   "sapNetweaver-750")
      PRODUCT_PREFIX="NW750"
