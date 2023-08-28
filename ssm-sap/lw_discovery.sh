@@ -47,7 +47,7 @@ HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_I
 HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
     --name $HANA_SECRET_NAME-SSMSAP \
     --description "Use with SSM for SAP" \
-    --secret-string "{\"username\":\"Administrator\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
+    --secret-string "{\"username\":\"SYSTEM\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
 RES_POLICY=$(aws secretsmanager put-resource-policy \
     --secret-id $HANA_SECRET_ID_SSM \
     --resource-policy file://mypolicy.json \
