@@ -4,7 +4,8 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 
 | Feature  | Status | Description |
 | ------------- | ------------- | ------------- |
-| **[SAP Software Download](software_download/)**   | [![All software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) [![saps4hanafoundations-2022](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard.yml) | Fetches all required artifacts from SAP Software Center to execute AWS Launch Wizard for SAP deployments |
+| **[SAP Software Download](software_download/)**   | [![All software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) [![saps4hanafoundations-2022](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard.yml) | Fetches all [required artifacts](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-software-install-details.html) from SAP Software Center to execute AWS Launch Wizard for SAP deployments |
+| **[SSM for SAP](ssm-sap/)**   |  | Performs [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html) registration |
 
 ## Found an issue? Anything to add?
 
