@@ -71,9 +71,9 @@ MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_SID --query "*.Stat
 if [[ $MYSTATUS != "ACTIVATED" ]]
 then
 echo "Registration failed!"
-aws ssm-sap get-application --application-id $SAP_SID
 else
 echo "Registration successful!"
 fi
+aws ssm-sap get-application --application-id $SAP_SID
 
 fi
