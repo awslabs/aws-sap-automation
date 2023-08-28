@@ -85,7 +85,6 @@ echo -n "Fetch SAP MASTER PW from Secrets Manager"
 HANA_SECRET_ID=$(sed -n 's|.*"ParameterKey":"HANAMasterPassKey", "ParameterValue":"\([^"]*\)".*|\1|p' parameters.json)
 MASTER_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $HANA_SECRET_ID --query 'SecretString')
 MASTER_PASSWORD=$(sed -e 's/^"//' -e 's/"$//' <<<"$MASTER_PASSWORD")
-HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name')
 
 echo -e " ${GREEN}...done!${NO_COLOR}"
 
@@ -111,7 +110,7 @@ echo "SAP_CI_HOSTNAME: "$SAP_CI_HOSTNAME;
 echo "SAP_HANA_SID: "$SAP_HANA_SID;
 echo "SAP_HANA_INSTANCE_NR: "$SAP_HANA_INSTANCE_NR;
 echo "SAP_HANA_HOSTNAME: "$SAP_HANA_HOSTNAME;
-echo "HANA_SECRET_NAME: "$HANA_SECRET_NAME;
+echo "HANA_SECRET_ID: "$HANA_SECRET_ID;
 echo ""
 echo "SAP_SAPCAR_SOFTWARE_S3_BUCKET: "$SAP_SAPCAR_SOFTWARE_S3_BUCKET;
 echo "SAP_SWPM_SOFTWARE_S3_BUCKET: "$SAP_SWPM_SOFTWARE_S3_BUCKET;
