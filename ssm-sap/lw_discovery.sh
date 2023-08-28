@@ -28,7 +28,7 @@ aws ec2 create-tags --resources $EC2_INSTANCE_ID --tags Key=SSMForSAPManaged,Val
 
 #CREATE NEW SECRET IF NOT EXISTS
 echo "Create a new secret for SSM for SAP!"
-HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name')
+HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name' --output text)
 HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
     --name $HANA_SECRET_NAME-SSMforSAP \
     --description "Use with SSM for SAP" \
