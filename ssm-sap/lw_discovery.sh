@@ -45,9 +45,9 @@ echo '{"Version": "2012-10-17",
 }' > mypolicy.json
 HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name' --output text)
 HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
-    --name $HANA_SECRET_NAME-SSMforSAP \
+    --name $HANA_SECRET_NAME-SSMSAP \
     --description "Use with SSM for SAP" \
-    --secret-string "{\"user\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
+    --secret-string "{\"username\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
 aws secretsmanager put-resource-policy \
     --secret-id $HANA_SECRET_ID_SSM \
     --resource-policy file://mypolicy.json \
@@ -56,13 +56,13 @@ rm mypolicy.json
 
 #REGISTER APPLICATION
 echo "Registering Application..."
-aws ssm-sap register-application \
+MYSTATUS=$(aws ssm-sap register-application \
 --application-id $SAP_SID \
 --application-type HANA \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
 --sid $SAP_HANA_SID \
---credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"}]'
+--credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"}]')
 
 sleep 120
 
