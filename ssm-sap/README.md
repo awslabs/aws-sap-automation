@@ -22,6 +22,7 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 
 - Check [Launch Wizard Post-deployment script Log](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-troubleshooting.html#launch-wizard-sap-troubleshooting-scripts)
 - Check [SSM for SAP - Run Command Log](https://eu-central-1.console.aws.amazon.com/systems-manager/run-command/executing-commands?region=eu-central-1)
+- You can run 'aws ssm-sap deregister-application --application-id \<id\>' to re-register
 
 ## Considerations
 
