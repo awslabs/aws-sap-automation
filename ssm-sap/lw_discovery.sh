@@ -17,7 +17,7 @@ MYPID=$(pidof hdbindexserver)
 if [[ $MYPID ]]
 then
 
-#Fix for ImportError: cannot import name 'SCHEME_KEYS'
+#SUSE Fix for ImportError: cannot import name 'SCHEME_KEYS'
 sudo zypper -n rm python3-pip
 sudo rm -fr /usr/lib/python3.6/site-packages/pip*
 sudo zypper -n in python3-pip
@@ -28,11 +28,31 @@ aws ec2 create-tags --resources $EC2_INSTANCE_ID --tags Key=SSMForSAPManaged,Val
 
 #CREATE NEW SECRET IF NOT EXISTS
 echo "Create a new secret for SSM for SAP!"
+EC2_ROLE=$(aws sts get-caller-identity --query "Arn" --output text)
+echo '{"Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "'$EC2_ROLE'"
+                ]
+            },
+            "Action": "secretsmanager:GetSecretValue",
+            "Resource": "*"
+        }
+    ]
+}' > mypolicy.json
 HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name' --output text)
 HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
     --name $HANA_SECRET_NAME-SSMforSAP \
     --description "Use with SSM for SAP" \
-    --secret-string "{\"user\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name')
+    --secret-string "{\"user\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
+aws secretsmanager put-resource-policy \
+    --secret-id $HANA_SECRET_ID_SSM \
+    --resource-policy file://mypolicy.json \
+    --block-public-policy
+rm mypolicy.json
 
 #REGISTER APPLICATION
 echo "Registering Application..."
@@ -42,14 +62,14 @@ aws ssm-sap register-application \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
 --sid $SAP_HANA_SID \
---credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$SAPHANASECRET'"}]'
+--credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"}]'
 
 sleep 120
 
 aws ssm-sap get-application --application-id $SAP_SID
 MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_SID --query "*.Status" --output text)
 
-if [[ $MYSTATUS = "ACTIVATED" ]]
+if [[ $MYSTATUS -eq "ACTIVATED" ]]
 then
 echo "Registration successful!"
 else

@@ -12,7 +12,8 @@
             "Effect": "Allow",
             "Action": [
                 "secretsmanager:CreateSecret",
-                "secretsmanager:DescribeSecret"
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:PutResourcePolicy"
             ],
             "Resource": "*"
         }

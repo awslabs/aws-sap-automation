@@ -27,3 +27,4 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 
 - Not supported for HA configurations!
 - Currently only HANA database is supported!
+- Only tested for SLES!
