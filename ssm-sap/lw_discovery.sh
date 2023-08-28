@@ -24,24 +24,24 @@ sudo zypper -n in python3-pip
 
 #ADD TAG SSMForSAPManaged=True
 echo "Tagging EC2 instance!"
-aws ec2 create-tags --resources $ec2_instance_id --tags Key=SSMForSAPManaged,Value=True
+aws ec2 create-tags --resources $EC2_INSTANCE_ID --tags Key=SSMForSAPManaged,Value=True
 
 #CREATE NEW SECRET IF NOT EXISTS
 echo "Create a new secret for SSM for SAP!"
-aws secretsmanager create-secret \
-    --name $HANA_SECRET_ID-SSM \
+HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
+    --name $HANA_SECRET_NAME-SSM \
     --description "Use with SSM for SAP" \
-    --secret-string "{\"user\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}"
+    --secret-string "{\"user\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name')
 
 #REGISTER APPLICATION
 echo "Registering Application..."
 aws ssm-sap register-application \
 --application-id $SAP_SID \
 --application-type HANA \
---instances $ec2_instance_id \
+--instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
 --sid $SAP_HANA_SID \
---credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$SAPHANASECRET'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$SAPHANASECRET'"}]'
+--credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$SAPHANASECRET'"}]'
 
 sleep 120
 

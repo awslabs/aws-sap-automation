@@ -21,12 +21,12 @@ echo ""
 echo -n "Fetch CloudFormation Stack config"
 echo ""
 
-ec2_instance_id="`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id`"
+EC2_INSTANCE_ID="`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id`"
 if [ $? -ne 0 ]; then
 echo -e "${RED}Error:${NO_COLOR} Could not determine EC2 Instance ID"
 exit 1;
 fi
-StackName=$(aws cloudformation describe-stack-resources --physical-resource-id $ec2_instance_id --query "StackResources[0].StackName")
+StackName=$(aws cloudformation describe-stack-resources --physical-resource-id $EC2_INSTANCE_ID --query "StackResources[0].StackName")
 StackName=$(sed -e 's/^"//' -e 's/"$//' <<<"$StackName")
 StackNotificationARNs=$(aws cloudformation describe-stacks --stack-name $StackName --query "Stacks[0].NotificationARNs")   
 #StackNotificationARNs=$(sed -e 's/\[//g' -e 's/\]//g' -e 's/ //g' -e 's/^"//' -e 's/"$//' <<<"$StackNotificationARNs")       # todo: Transform into a format usable when more than one topics are present
@@ -85,7 +85,7 @@ echo -n "Fetch SAP MASTER PW from Secrets Manager"
 HANA_SECRET_ID=$(sed -n 's|.*"ParameterKey":"HANAMasterPassKey", "ParameterValue":"\([^"]*\)".*|\1|p' parameters.json)
 MASTER_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $HANA_SECRET_ID --query 'SecretString')
 MASTER_PASSWORD=$(sed -e 's/^"//' -e 's/"$//' <<<"$MASTER_PASSWORD")
-#MASTER_PASSWORD_SECRET=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name')
+HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name')
 
 echo -e " ${GREEN}...done!${NO_COLOR}"
 
@@ -97,6 +97,7 @@ echo "StackId: "$StackId;
 echo "StackName: "$StackName;
 echo "StackNotificationARNs: "$StackNotificationARNs;
 echo ""
+echo "EC2_INSTANCE_ID: "$EC2_INSTANCE_ID;
 echo "VPC_ID: "$VPC_ID;
 echo "SUBNET_ID: "$SUBNET_ID;
 echo "SECURITYGROUPS: "$SECURITYGROUP;
@@ -110,6 +111,7 @@ echo "SAP_CI_HOSTNAME: "$SAP_CI_HOSTNAME;
 echo "SAP_HANA_SID: "$SAP_HANA_SID;
 echo "SAP_HANA_INSTANCE_NR: "$SAP_HANA_INSTANCE_NR;
 echo "SAP_HANA_HOSTNAME: "$SAP_HANA_HOSTNAME;
+echo "HANA_SECRET_NAME: "$HANA_SECRET_NAME;
 echo ""
 echo "SAP_SAPCAR_SOFTWARE_S3_BUCKET: "$SAP_SAPCAR_SOFTWARE_S3_BUCKET;
 echo "SAP_SWPM_SOFTWARE_S3_BUCKET: "$SAP_SWPM_SOFTWARE_S3_BUCKET;
