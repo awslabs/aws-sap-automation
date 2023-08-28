@@ -17,10 +17,14 @@ MYPID=$(pidof hdbindexserver)
 if [[ $MYPID ]]
 then
 
-#SUSE Fix for ImportError: cannot import name 'SCHEME_KEYS'
+#SLES ONLY: Fix for "ImportError: cannot import name 'SCHEME_KEYS'"
+OS=$(grep '^NAME' /etc/os-release)
+if [[ $OS = 'NAME="SLES"' ]] 
+then
 sudo zypper -n rm python3-pip
 sudo rm -fr /usr/lib/python3.6/site-packages/pip*
 sudo zypper -n in python3-pip
+fi
 
 #ADD TAG SSMForSAPManaged=True
 echo "Tagging EC2 instance!"
