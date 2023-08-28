@@ -47,11 +47,11 @@ HANA_SECRET_NAME=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_I
 HANA_SECRET_ID_SSM=$(aws secretsmanager create-secret \
     --name $HANA_SECRET_NAME-SSMSAP \
     --description "Use with SSM for SAP" \
-    --secret-string "{\"username\":\"ADMIN\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
-aws secretsmanager put-resource-policy \
+    --secret-string "{\"username\":\"Administrator\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
+RES_POLICY=$(aws secretsmanager put-resource-policy \
     --secret-id $HANA_SECRET_ID_SSM \
     --resource-policy file://mypolicy.json \
-    --block-public-policy
+    --block-public-policy)
 rm mypolicy.json
 
 #REGISTER APPLICATION
@@ -66,15 +66,14 @@ MYSTATUS=$(aws ssm-sap register-application \
 
 sleep 120
 
-aws ssm-sap get-application --application-id $SAP_SID
 MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_SID --query "*.Status" --output text)
 
-if [[ $MYSTATUS -eq "ACTIVATED" ]]
+if [[ $MYSTATUS != "ACTIVATED" ]]
 then
-echo "Registration successful!"
-else
 echo "Registration failed!"
-exit 1
+aws ssm-sap get-application --application-id $SAP_SID
+else
+echo "Registration successful!"
 fi
 
 fi
