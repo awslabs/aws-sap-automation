@@ -82,10 +82,10 @@ echo -e " ${GREEN}...done!${NO_COLOR}"
 
 echo -n "Fetch SAP MASTER PW from Secrets Manager"
 
-hanamasterpasskey=$(sed -n 's|.*"ParameterKey":"HANAMasterPassKey", "ParameterValue":"\([^"]*\)".*|\1|p' parameters.json)
-MASTER_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $hanamasterpasskey --query 'SecretString')
+HANA_SECRET_ID=$(sed -n 's|.*"ParameterKey":"HANAMasterPassKey", "ParameterValue":"\([^"]*\)".*|\1|p' parameters.json)
+MASTER_PASSWORD=$(aws secretsmanager get-secret-value --secret-id $HANA_SECRET_ID --query 'SecretString')
 MASTER_PASSWORD=$(sed -e 's/^"//' -e 's/"$//' <<<"$MASTER_PASSWORD")
-#MASTER_PASSWORD_SECRET=$(aws secretsmanager describe-secret --secret-id $hanamasterpasskey --query 'Name')
+#MASTER_PASSWORD_SECRET=$(aws secretsmanager describe-secret --secret-id $HANA_SECRET_ID --query 'Name')
 
 echo -e " ${GREEN}...done!${NO_COLOR}"
 
