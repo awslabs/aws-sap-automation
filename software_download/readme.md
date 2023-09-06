@@ -64,7 +64,6 @@ chmod +x utils/colors.sh
 chmod +x utils/lw_bootstrap.sh
 chmod +x software_download/lw_software_download.sh
 cd software_download
-./lw_software_download.sh
 ```
 
 ### Validate download links only
