@@ -74,12 +74,13 @@ fi
 # --- Validate S-USER ---
 
 echo -n "Validating SAP S-User"
+echo ""
 CHECK_URL="https://softwaredownloads.sap.com/file/0020000001450632021" #SAPEXE_50-80005374.SAR from S/4HANA 2021
-RETURNCODE=`wget -q -r -U "SAP Download Manager 123" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $CHECK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+RETURNCODE=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $CHECK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
 if [[ $RETURNCODE -ne 200 && $RETURNCODE -ne 302 ]]
 then 
-  echo -e "${RED}Error:${NO_COLOR} SAP S-User username/password invalid! (HTTP "${RETURNCODE}")" 
+  echo -e "${RED}Error:${NO_COLOR} SAP S-User ($S_USER) invalid, please verify username/password! (HTTP "${RETURNCODE}")" 
   exit 1
 fi
 
@@ -246,7 +247,7 @@ then
     if [[ $SWDC_URL != "" ]]
     then
       echo -n "Validating link " $SWDC_URL "for "${ITEM_VARIABLE}
-      WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager 123" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+      WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
       if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
       then 
@@ -268,7 +269,7 @@ then
     SWDC_URL=`echo "${!ITEM_VARIABLE}"`
 
     echo -n "Validating link for "${ITEM_VARIABLE}
-    WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager 123" --max-redirect 1 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+    WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
     if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
     then 
@@ -330,7 +331,7 @@ do
   # not all stacks necessarily have all the same technical foundation parts (e.g. SAPJVM is only valid for sapsolman-7.2 and sapNetweaverJavaOnly-750)
   if [[ $SWDC_URL != "" ]]
   then
-    FILENAME=`wget -q -r -U "SAP Download Manager 123" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
+    FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
   fi
 
 
@@ -353,7 +354,7 @@ do
     do
         echo ""
         echo -n "Downloading "$FILENAME;
-        WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager 123" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL`;
+        WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL`;
 
         if [[ $WGET_RC -eq 0 ]]
         then
@@ -434,7 +435,7 @@ do
  SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`
 
 
- FILENAME=`wget -q -r -U "SAP Download Manager 123" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
+ FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
 
  if [[ $FILENAME ]]
  then
@@ -456,7 +457,7 @@ do
     do
         echo ""
         echo -n "Downloading $SAP_PRODUCT_ID export filename: "$FILENAME;
-        WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager 123" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL;`
+        WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL;`
 
         if [[ $WGET_RC -eq 0 ]]
           then
