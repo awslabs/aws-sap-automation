@@ -1,5 +1,5 @@
 #Runs bi-weekly
-name: saps4hana-2022
+name: s4hana-2022
 
 # Controls when the workflow will run
 on:
