@@ -107,7 +107,7 @@ Example:
 ./lw_software_download.sh
 ```
 
-## How to update SWDC Links
+## How to update download links
 
 - Go to [SAP Support Launchpad](https://me.sap.com/softwarecenter)
 - Search for file(s) e.g. SWPM
