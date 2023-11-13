@@ -25,6 +25,8 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 
 ![image](lw_pre_script.png)
 
+---
+
 Next, specify the **SAP application software location** and use the following naming convention:
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SAPCAR
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SWPM
@@ -34,6 +36,8 @@ Next, specify the **SAP application software location** and use the following na
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADBCLIENT
 
 ![image](lw_software.png)
+
+---
 
 Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 
@@ -49,6 +53,8 @@ Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 - saps4hanafoundations-2021
 - saps4hanafoundations-2022
 - sapsolman-7.2
+
+All done!
 
 ## Usage via Shell e.g. AWS Cloud9
 
@@ -116,10 +122,10 @@ Example:
 ## Considerations
 
 - **SAP S-User passwords expire after 6 months** and have to be changed in the SAP Me Portal, otherwise the script will throw a "Username/Password Authentication Failed." error
-- SAP Installation files are currently being **downloaded into the DB instance’s provisioned Amazon EFS share for staging**, folder name is “/media/LaunchWizard-<LW_Deployment_Name>". Each file is uploaded immediately after download, and then deleted from the local storage. This should work for all stacks as the largest file is currently the HANA binary (14.3 GB).
+- SAP Installation files are currently being **downloaded into the DB instance’s provisioned Amazon EFS share for staging**, folder name is '/media/LaunchWizard-\<LW_Deployment_Name\>'. Each file is uploaded immediately after download, and then deleted from the local storage. This should work for all stacks as the largest file is currently the HANA binary (14.3 GB).
 - Certain download links like **SAPCAR**, **SWPM** and **HANADB** should be checked frequently due to SAP taking the files offline as soon as new patch levels are released. Links to the DVD installer files are more stable but will be taken offline as well once the respective product is being deprecated
 - Download links for the various software products have been taken from https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-software-install-details.html. For some components, newer versions have been considered.
 - The filenames are fetched via a HEAD request (wget), which might slow things down for larger amounts of files, especially since the **SAP download server sends 2-3 redirects** for certain download links
 - Since all files are currently being downloaded into the EFS share and uploaded into S3 afterwards, an **S3 VPC Endpoint** is highly recommended for performance and cost efficiency.
 - The longest runtime of about 20-30 minutes is observed for the s4hana2021 stack (Note: Launch Wizard caps overall pre-script runtime at 45 minutes).
-- Launch Wizard places the pre-deployment scripts in **/root/install/scripts** on the respective host and names them preConfiguration-<number>
+- Launch Wizard places the pre-deployment scripts in **/root/install/scripts** on the respective host and names them 'preConfiguration-\<number\>'
