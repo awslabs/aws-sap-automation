@@ -50,7 +50,7 @@ jobs:
             if [ $(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status') != "IN_PROGRESS" ]; then
               status=$(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status')
               echo "Deployment $status"
-              if [ $status != "COMPLETED" ]; then
+              if [[ $status != "COMPLETED" ]]; then
                   exit 1
               fi   
               break
