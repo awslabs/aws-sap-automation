@@ -34,8 +34,23 @@ jobs:
       - name: test
         run: |
           aws --version
-          aws s3 cp s3://${{ secrets.STAGING_S3 }}/S4TESTRUN1-1689931791648/ ./ --recursive
           MyTimestamp=$(date +%s)
-          StackName=LaunchWizard-S4TESTRUN-$MyTimestamp
+          StackName=S4TESTRUN-$MyTimestamp
           echo $MyTimestamp
-          aws cloudformation deploy --stack-name $StackName --template-file S4TESTRUN1-SapNWOnHanaSingle-template.json --parameter-overrides Timestamp=$MyTimestamp HANAMasterPassKey="${{ secrets.HANAMasterPassKey }}" --s3-bucket ${{ secrets.STAGING_S3 }} --capabilities CAPABILITY_AUTO_EXPAND CAPABILITY_NAMED_IAM CAPABILITY_IAM --disable-rollback
+          echo "${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2022 }}" > stack.json
+          DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
+          sleep 10s
+          echo "Deployment started: "$DEPLOYMENT_ID
+          until [ $(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status') = *"IN_PROGRESS"* ];
+          do
+            echo "Waiting to complete...."
+            sleep 60s
+            if [ $(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status') != "IN_PROGRESS" ]; then
+              status=$(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status')
+              echo "Deployment $status"
+              if [$status != "COMPLETED"]; then
+                  exit 0
+              fi   
+              break
+            fi
+          done
