@@ -5,7 +5,7 @@ Fetches all required artifacts from SAP Software Center to execute AWS Launch Wi
 
 ## Prerequisites (Once only)
 
-- Create new Amazon S3 Bucket e.g. **launchwizard-`<AWSAccountID>`**
+- Create new Amazon S3 Bucket **launchwizard-`<AWSAccountID>`** (Note: Bucket Name must contain 'launchwizard' as prefix)
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
 - Create a new secret called **sap-s-user** in AWS Secrets Manager (use default AWS Managed KMS key)
   - Store S-User -> property **username**
@@ -25,7 +25,7 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 
 ![image](lw_pre_script.png)
 
-Next, specify the **SAP application software location** - suggested naming convention:
+Next, specify the **SAP application software location** and use the following naming convention:
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SAPCAR
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SWPM
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/KERNEL
@@ -33,7 +33,9 @@ Next, specify the **SAP application software location** - suggested naming conve
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADB
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADBCLIENT
 
-Supported **SAP_PRODUCT_ID**, as per AWS Launch Wizard for SAP
+![image](lw_software.png)
+
+Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 
 - sapNetweaver-750
 - sapNetweaverJavaOnly-750
@@ -102,7 +104,7 @@ Example:
 - Search for file(s) e.g. SWPM
 - Filter by **Linux on x86_64 64bit**
 - Locate latest file and click on **Content Info**
-- Note and replace MD5 Hash as well Object ID in [lw_software_download.sh](lw_software_download.sh)
+- Note and replace MD5 Hash as well Object ID in [links.csv](links.csv)
 
 ## Troubleshooting
 
