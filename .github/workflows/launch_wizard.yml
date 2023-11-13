@@ -51,7 +51,7 @@ jobs:
               status=$(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status')
               echo "Deployment $status"
               if [ $status != "COMPLETED" ]; then
-                  exit 0
+                  exit 1
               fi   
               break
             fi
