@@ -40,7 +40,7 @@ jobs:
           MyTimestamp=$(date +%s)
           StackName=S4TESTRUN-$MyTimestamp
           echo $MyTimestamp
-          echo "${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2022 }}" > stack.json
+          echo ${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2022 }} > stack.json
           DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
           sleep 10s
           echo "Deployment started: "$DEPLOYMENT_ID
