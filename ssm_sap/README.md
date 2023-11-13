@@ -13,7 +13,7 @@ In AWS Launch Wizard for SAP, proceed to **Configure deployment model**.
 In section **Pre-deployment configuration script**, choose the following Amazon S3 URL as script location:
 
 ```bash
-s3://aws-sap-automation/ssm-sap/run.sh
+s3://aws-sap-automation/ssm_sap/run.sh
 ```
 
 Make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
