@@ -7,9 +7,12 @@ Fetches all required artifacts from SAP Software Center to execute AWS Launch Wi
 
 - Create new Amazon S3 Bucket **launchwizard-`<AWSAccountID>`** (Note: Bucket Name must contain 'launchwizard' as prefix)
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
-- Create a new secret called **sap-s-user** in AWS Secrets Manager (use default AWS Managed KMS key)
-  - Store S-User -> property **username**
-  - Store Password -> property **password**
+- Create a new secret called **sap-s-user** in AWS Secrets Manager:
+  - Encryption key: Use default AWS Managed KMS key = **aws/secretsmanager**
+  - Secret type: Choose **Other type of secret**
+  - Maintain Key/value pairs
+    - Store S-User -> key **username**
+    - Store Password -> key **password**
 - (Optional) Create VPC Endpoint for S3 for faster upload to S3 and to save on data transfer costs
 
 ## Usage via AWS Launch Wizard for SAP
