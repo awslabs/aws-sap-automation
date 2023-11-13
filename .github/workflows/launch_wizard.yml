@@ -33,6 +33,9 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: test
         run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
           aws --version
           MyTimestamp=$(date +%s)
           StackName=S4TESTRUN-$MyTimestamp
