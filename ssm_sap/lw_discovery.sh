@@ -87,10 +87,17 @@ fi
 
 aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID
 
+#VERIFY SAP HANA
+MYCOMP=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --output text --query "*.Components[0]")
+aws ssm-sap get-component --application-id $StackNameClean$SAP_HANA_SID --component-id $MYCOMP
+
+
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
 
 DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
+
+echo $DB_ARN
 
 #REGISTER SAP APPSRV
 echo "Registering SAP ABAP Application Server..."
@@ -98,7 +105,7 @@ MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 --application-id $StackNameClean$SAP_SID \
 --application-type SAP_ABAP \
 --instances $EC2_INSTANCE_ID \
---sid $SAP_SID \
+--sid $SAP_HANA_SID \
 --database-arn $DB_ARN)
 
 sleep 120
