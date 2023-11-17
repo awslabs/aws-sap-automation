@@ -27,7 +27,7 @@ sudo zypper -n in python3-pip
 fi
 
 #INSTALL LATEST BOTO3
-pip3 install boto3 --upgrade
+sudo pip3 install boto3 --upgrade
 
 #ADD TAG SSMForSAPManaged=True
 echo "Tagging EC2 instance!"
@@ -87,13 +87,13 @@ fi
 
 aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID
 
-DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
-
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
 
+DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
+
 #REGISTER SAP APPSRV
-echo "Registering SAP AppSrv..."
+echo "Registering SAP ABAP Application Server..."
 MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 --application-id $StackNameClean$SAP_SID \
 --application-type SAP_ABAP \
