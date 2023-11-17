@@ -1,6 +1,6 @@
 # SSM for SAP Registration
 
-Registers SAP HANA database and/or SAP ABAP Application Server single-node deployments as part of Launch Wizard deployment with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html).
+Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard deployment with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html).
 
 ## Prerequisites (Once only)
 

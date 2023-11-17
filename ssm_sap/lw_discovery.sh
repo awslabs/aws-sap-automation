@@ -67,7 +67,7 @@ StackNameClean=$(echo "$StackName" | tr -d -)
 echo "Registering SAP HANA..."
 MYSTATUS=$(aws ssm-sap register-application \
 --application-id $StackNameClean$SAP_HANA_SID \
---application-type HANA \
+--application-type "HANA" \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
 --sid $SAP_HANA_SID \
@@ -99,13 +99,13 @@ DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SI
 
 echo $DB_ARN
 
-#REGISTER SAP APPSRV
+#REGISTER SAP ABAP APPLICATION SERVER
 echo "Registering SAP ABAP Application Server..."
 MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 --application-id $StackNameClean$SAP_SID \
---application-type SAP_ABAP \
+--application-type "SAP_ABAP" \
 --instances $EC2_INSTANCE_ID \
---sid $SAP_HANA_SID \
+--sid $SAP_SID \
 --database-arn $DB_ARN)
 
 sleep 120

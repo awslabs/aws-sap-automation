@@ -15,7 +15,7 @@
                 "secretsmanager:DescribeSecret",
                 "secretsmanager:PutResourcePolicy"
             ],
-            "Resource": "*"
+            "Resource": "arn:aws:secretsmanager:*:*:secret:LaunchWizard*"
         }
     ]
 }
