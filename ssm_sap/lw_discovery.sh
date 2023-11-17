@@ -27,7 +27,7 @@ sudo zypper -n in python3-pip
 fi
 
 #INSTALL LATEST BOTO3
-pip3 install boto3>=1.26.0 --upgrade
+pip3 install boto3 --upgrade
 
 #ADD TAG SSMForSAPManaged=True
 echo "Tagging EC2 instance!"
@@ -61,10 +61,12 @@ RES_POLICY=$(aws secretsmanager put-resource-policy \
     --block-public-policy)
 rm mypolicy.json
 
+StackNameClean=$(echo "$StackName" | tr -d -)
+
 #REGISTER SAP HANA
 echo "Registering SAP HANA..."
 MYSTATUS=$(aws ssm-sap register-application \
---application-id $StackName$SAP_HANA_SID \
+--application-id $StackNameClean$SAP_HANA_SID \
 --application-type HANA \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
@@ -73,7 +75,7 @@ MYSTATUS=$(aws ssm-sap register-application \
 
 sleep 120
 
-MYSTATUS=$(aws ssm-sap get-application --application-id $StackName$SAP_HANA_SID --query "*.Status" --output text)
+MYSTATUS=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --query "*.Status" --output text)
 
 if [[ $MYSTATUS != "ACTIVATED" ]]
 then
@@ -83,9 +85,9 @@ else
 echo "Registration successful!"
 fi
 
-aws ssm-sap get-application --application-id $StackName$SAP_HANA_SID
+aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID
 
-DB_ARN=$(aws ssm-sap list-databases --application-id $StackName$SAP_HANA_SID --query "Databases[0].Arn" --output text)
+DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
 
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
@@ -93,7 +95,7 @@ if [ -d /usr/sap/$SAP_SID ]; then
 #REGISTER SAP APPSRV
 echo "Registering SAP AppSrv..."
 MYSTATUS_APPSRV=$(aws ssm-sap register-application \
---application-id $StackName$SAP_SID \
+--application-id $StackNameClean$SAP_SID \
 --application-type SAP_ABAP \
 --instances $EC2_INSTANCE_ID \
 --sid $SAP_SID \
@@ -101,7 +103,7 @@ MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 
 sleep 120
 
-MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $StackName$SAP_SID --query "*.Status" --output text)
+MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_SID --query "*.Status" --output text)
 
 if [[ $MYSTATUS_APPSRV != "ACTIVATED" ]]
 then
@@ -111,11 +113,11 @@ else
 echo "Registration successful!"
 fi
 
-aws ssm-sap get-application --application-id $StackName$SAP_SID
+aws ssm-sap get-application --application-id $StackNameClean$SAP_SID
 
 #VERIFY SAP APPSRV
-MYCOMP=$(aws ssm-sap get-application --application-id $StackName$SAP_SID --output text --query "*.Components[0]")
-aws ssm-sap get-component --application-id $StackName$SAP_SID --component-id $MYCOMP
+MYCOMP=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_SID --output text --query "*.Components[0]")
+aws ssm-sap get-component --application-id $StackNameClean$SAP_SID --component-id $MYCOMP
 
 fi
 
