@@ -3,7 +3,7 @@
 #Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #SPDX-License-Identifier: Apache-2.0
 
-#DESCRIPTION: AWS Launch Wizard for SAP - PostConfiguration script to register HDB with SSM for SAP 
+#DESCRIPTION: AWS Launch Wizard for SAP - PostConfiguration script to register single-node HANA and/or SAP AppSrv with SSM for SAP 
 #https://docs.aws.amazon.com/ssm-sap/latest/userguide/what-is-ssm-for-sap.html
 #EXECUTE: Can be run only via AWS Launch Wizard for SAP
 #AUTHOR: mtoerpe@
@@ -58,10 +58,10 @@ RES_POLICY=$(aws secretsmanager put-resource-policy \
     --block-public-policy)
 rm mypolicy.json
 
-#REGISTER APPLICATION
-echo "Registering Application..."
+#REGISTER SAP HANA
+echo "Registering SAP HANA..."
 MYSTATUS=$(aws ssm-sap register-application \
---application-id $SAP_SID \
+--application-id $SAP_HANA_SID \
 --application-type HANA \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
@@ -70,7 +70,7 @@ MYSTATUS=$(aws ssm-sap register-application \
 
 sleep 120
 
-MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_SID --query "*.Status" --output text)
+MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_HANA_SID --query "*.Status" --output text)
 
 if [[ $MYSTATUS != "ACTIVATED" ]]
 then
@@ -78,6 +78,43 @@ echo "Registration failed!"
 else
 echo "Registration successful!"
 fi
+
+aws ssm-sap get-application --application-id $SAP_HANA_SID
+
+DB_ARN=$(aws ssm-sap list-databases --application-id $SAP_HANA_SID --query "Databases[0].Arn" --output text)
+
+#RUN ONLY IN CASE OF SAP APPSRV
+if [ -d /usr/sap/$SAP_SID ]; then
+
+#REGISTER SAP APPSRV
+echo "Registering SAP AppSrv..."
+MYSTATUS_APPSRV=$(aws ssm-sap register-application \
+--application-id $SAP_SID \
+--application-type SAP_ABAP \
+--instances $EC2_INSTANCE_ID \
+--sid $SAP_SID \
+--database-arn $DB_ARN)
+
+sleep 120
+
+MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $SAP_SID --query "*.Status" --output text)
+
+if [[ $MYSTATUS_APPSRV != "ACTIVATED" ]]
+then
+echo "Registration failed!"
+else
+echo "Registration successful!"
+fi
+
 aws ssm-sap get-application --application-id $SAP_SID
 
+#VERIFY SAP APPSRV
+MYCOMP=$(aws ssm-sap get-application --application-id $SAP_SID --output text --query "*.Components[0]")
+aws ssm-sap get-component --component-id $MYCOMP --application-id $SAP_SID 
+
 fi
+
+
+
+fi
+echo "All done!"
