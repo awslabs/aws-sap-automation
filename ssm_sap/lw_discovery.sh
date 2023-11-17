@@ -75,6 +75,7 @@ MYSTATUS=$(aws ssm-sap get-application --application-id $SAP_HANA_SID --query "*
 if [[ $MYSTATUS != "ACTIVATED" ]]
 then
 echo "Registration failed!"
+exit 1
 else
 echo "Registration successful!"
 fi
@@ -102,6 +103,7 @@ MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $SAP_SID --query 
 if [[ $MYSTATUS_APPSRV != "ACTIVATED" ]]
 then
 echo "Registration failed!"
+exit 1
 else
 echo "Registration successful!"
 fi
