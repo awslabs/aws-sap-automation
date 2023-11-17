@@ -27,7 +27,7 @@ sudo zypper -n in python3-pip
 fi
 
 #INSTALL LATEST BOTO3
-pip3 install boto3 --upgrade
+pip3 install boto3>=1.26.0 --upgrade
 
 #ADD TAG SSMForSAPManaged=True
 echo "Tagging EC2 instance!"
