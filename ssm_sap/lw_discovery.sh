@@ -91,6 +91,8 @@ aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID
 MYCOMP=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --output text --query "*.Components[0]")
 aws ssm-sap get-component --application-id $StackNameClean$SAP_HANA_SID --component-id $MYCOMP
 
+HOSTCTRL=$(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json)
+echo $HOSTCTRL
 
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
