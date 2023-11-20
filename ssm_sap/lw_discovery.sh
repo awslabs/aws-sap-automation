@@ -73,7 +73,7 @@ MYSTATUS=$(aws ssm-sap register-application \
 --sid $SAP_HANA_SID \
 --credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"}]')
 
-sleep 180
+sleep 120
 
 MYSTATUS=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --query "*.Status" --output text)
 
@@ -95,8 +95,10 @@ aws ssm-sap get-component --application-id $StackNameClean$SAP_HANA_SID --compon
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
 
-DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
+HOSTCTRL=$(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json)
+echo $HOSTCTRL
 
+DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
 echo $DB_ARN
 
 #REGISTER SAP ABAP APPLICATION SERVER
@@ -108,7 +110,7 @@ MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 --sid $SAP_SID \
 --database-arn $DB_ARN)
 
-sleep 180
+sleep 120
 
 MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_SID --query "*.Status" --output text)
 
