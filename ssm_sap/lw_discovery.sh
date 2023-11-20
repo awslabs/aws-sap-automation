@@ -73,7 +73,7 @@ MYSTATUS=$(aws ssm-sap register-application \
 --sid $SAP_HANA_SID \
 --credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$HANA_SECRET_ID_SSM'"}]')
 
-sleep 120
+sleep 180
 
 MYSTATUS=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --query "*.Status" --output text)
 
@@ -108,7 +108,7 @@ MYSTATUS_APPSRV=$(aws ssm-sap register-application \
 --sid $SAP_SID \
 --database-arn $DB_ARN)
 
-sleep 120
+sleep 180
 
 MYSTATUS_APPSRV=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_SID --query "*.Status" --output text)
 
