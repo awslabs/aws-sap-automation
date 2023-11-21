@@ -97,7 +97,10 @@ echo $HOSTCTRL
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
 
-sleep 300
+SAPOS=$(sudo /usr/sap/hostctrl/exe/saposcol -l)
+echo $SAPOS
+
+sleep 60
 
 SAPCTRL=$(sudo /usr/sap/hostctrl/exe/sapcontrol -nr $SAP_CI_INSTANCE_NR -function GetSystemInstanceList)
 echo $SAPCTRL
