@@ -91,22 +91,25 @@ aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID
 MYCOMP=$(aws ssm-sap get-application --application-id $StackNameClean$SAP_HANA_SID --output text --query "*.Components[0]")
 aws ssm-sap get-component --application-id $StackNameClean$SAP_HANA_SID --component-id $MYCOMP
 
-HOSTCTRL=$(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json)
-echo $HOSTCTRL
-
 #RUN ONLY IN CASE OF SAP APPSRV
 if [ -d /usr/sap/$SAP_SID ]; then
 
-SAPOS=$(sudo /usr/sap/hostctrl/exe/saposcol -l)
-echo $SAPOS
+HOSTCTRL=$(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json)
+echo $HOSTCTRL
 
+#WAIT FOR SAPHOSTCTRL
+until [[ "$HOSTCTRL" =~ .*"ABAP Instance".* ]];
+do
+echo "Waiting for saphostctrl..."
 sleep 60
+if [[ $(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json) =~ .*"ABAP Instance".* ]]; then
+    echo "...ready!"
+    break
+fi
+done
 
 SAPCTRL=$(sudo /usr/sap/hostctrl/exe/sapcontrol -nr $SAP_CI_INSTANCE_NR -function GetSystemInstanceList)
 echo $SAPCTRL
-
-HOSTCTRL=$(sudo /usr/sap/hostctrl/exe/saphostctrl -function GetCIMObject -enuminstances SAPInstance -format json)
-echo $HOSTCTRL
 
 DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
 echo $DB_ARN
