@@ -3,7 +3,7 @@
 #Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #SPDX-License-Identifier: Apache-2.0
 
-#DESCRIPTION: AWS Launch Wizard for SAP - PostConfiguration script to register HDB with SSM for SAP
+#DESCRIPTION: AWS Launch Wizard for SAP - Post Configuration Script to register SAP HANA DB / ABAP Application Server with AWS Systems Manager for SAP
 #EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: mtoerpe@
 

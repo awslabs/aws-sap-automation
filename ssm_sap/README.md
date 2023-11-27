@@ -10,13 +10,32 @@ Registers SAP HANA database and/or SAP ABAP Application Server **single-node** d
 ## Usage via AWS Launch Wizard for SAP
 
 In AWS Launch Wizard for SAP, proceed to **Configure deployment model**. 
-In section **Pre-deployment configuration script**, choose the following Amazon S3 URL as script location:
+In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location:
 
 ```bash
 s3://aws-sap-automation/ssm_sap/run.sh
 ```
 
-Make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
+The result looks as follows. Click 'next' to complete the wizard.
+
+![image](lw_post_script.png)
+
+## Usage post-deployment
+
+Execute the following lines on your **EC2 Instance**:
+
+```bash
+cd /
+mkdir -p aws-sap-automation
+cd aws-sap-automation
+aws s3 cp s3://aws-sap-automation/ssm_sap/ ./ssm_sap --recursive
+aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive
+chmod +x utils/colors.sh
+chmod +x utils/lw_bootstrap.sh
+chmod +x ssm_sap/lw_discovery.sh
+cd ssm_sap
+./lw_discovery.sh
+```
 
 ## Troubleshooting
 
@@ -28,3 +47,4 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 
 - Currently only single-node deployments are supported!
 - SAP Application Server registration depends on saphostctrl information
+- By default, you can only register up to 10 applications. For more make sure to increase you quota.
