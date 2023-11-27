@@ -27,4 +27,4 @@ Make sure to **untick** "Proceed with deployment in the event of a configuration
 ## Considerations
 
 - Currently only single-node deployments are supported!
-- Not supported for HA configurations!
+- SAP Application Server registration depends on saphostctrl information
