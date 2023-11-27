@@ -112,7 +112,7 @@ done
 SAPCTRL=$(sudo /usr/sap/hostctrl/exe/sapcontrol -nr $SAP_CI_INSTANCE_NR -function GetSystemInstanceList)
 echo $SAPCTRL
 
-DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[0].Arn" --output text)
+DB_ARN=$(aws ssm-sap list-databases --application-id $StackNameClean$SAP_HANA_SID --query "Databases[?DatabaseType=='TENANT'].Arn" --output text)
 echo $DB_ARN
 
 #REGISTER SAP ABAP APPLICATION SERVER
