@@ -62,6 +62,7 @@ RES_POLICY=$(aws secretsmanager put-resource-policy \
 rm mypolicy.json
 
 StackNameClean=$(echo "$StackName" | tr -d -)
+StackNameClean=$(echo "$StackNameClean" | tr -d _)
 
 #REGISTER SAP HANA
 echo "Registering SAP HANA..."
