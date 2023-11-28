@@ -1,6 +1,6 @@
 # SSM for SAP Registration
 
-Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard deployment with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html).
+Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard for SAP (LW4SAP) with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html).
 
 ## Prerequisites (Once only)
 
@@ -22,19 +22,12 @@ The result looks as follows. Click 'next' to complete the wizard.
 
 ## Usage post-deployment
 
-Execute the following lines on your **EC2 Instance**:
+Execute the following lines on your **EC2 Instance** (deployed by LW4SAP):
 
 ```bash
-cd /
-mkdir -p aws-sap-automation
-cd aws-sap-automation
-aws s3 cp s3://aws-sap-automation/ssm_sap/ ./ssm_sap --recursive
-aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive
-chmod +x utils/colors.sh
-chmod +x utils/lw_bootstrap.sh
-chmod +x ssm_sap/lw_discovery.sh
-cd ssm_sap
-./lw_discovery.sh
+aws s3 cp s3://aws-sap-automation/ssm_sap/run.sh ./
+chmod +x run.sh
+./run.sh
 ```
 
 ## Troubleshooting
