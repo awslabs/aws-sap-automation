@@ -35,8 +35,8 @@ Next, specify the **SAP application software location** and use the following na
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/SWPM
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/KERNEL
 - s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/EXPORT
-- s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADB
-- s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/HANADBCLIENT
+- s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/RDB
+- s3://launchwizard-`<AccountID>`/`<SAP_PRODUCT_ID>`/RDBCLIENT
 
 ![image](lw_software.png)
 
@@ -44,9 +44,9 @@ Next, specify the **SAP application software location** and use the following na
 
 Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 
-- sapNetweaver-750
-- sapNetweaverJavaOnly-750
-- sapNetweaver-752
+- sapNetweaver-750 (HANA|ASE)
+- sapNetweaverJavaOnly-750 (HANA|ASE)
+- sapNetweaver-752 (HANA|ASE)
 - sapbw4hana-2021
 - sapbw4hana-2.0
 - saps4hana-1909
@@ -55,7 +55,7 @@ Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 - saps4hana-2022
 - saps4hanafoundations-2021
 - saps4hanafoundations-2022
-- sapsolman-7.2
+- sapsolman-7.2 (HANA|ASE)
 
 All done!
 
@@ -69,8 +69,8 @@ All done!
 cd /
 mkdir aws-sap-automation
 cd aws-sap-automation
-aws s3 cp s3://aws-sap-automation/software_download/ ./software_download --recursive
-aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive
+aws s3 cp s3://aws-sap-automation/software_download/ ./software_download --recursive --region eu-central-1
+aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive --region eu-central-1
 chmod +x utils/colors.sh
 chmod +x utils/lw_bootstrap.sh
 chmod +x software_download/lw_software_download.sh
@@ -84,8 +84,14 @@ cd software_download
 ```
 
 Example:
+
 ```bash
 ./lw_software_download.sh validate saps4hana-2021
+```
+
+SAP ASE
+```bash
+./lw_software_download.sh validate sapsolman-7.2 SapNWOnAseSingle
 ```
 
 ### Download and store software in S3 only
@@ -97,6 +103,11 @@ Example:
 Example:
 ```bash
 ./lw_software_download.sh download saps4hana-2021 s3://launchwizard-346724746423/saps4hana-2021
+```
+
+SAP ASE
+```bash
+./lw_software_download.sh download sapsolman-7.2 s3://launchwizard-346724746423/solman72ase SapNWOnAseSingle
 ```
 
 ## End-to-End testing
@@ -126,7 +137,7 @@ Example:
 
 - **SAP S-User passwords expire after 6 months** and have to be changed in the SAP Me Portal, otherwise the script will throw a "Username/Password Authentication Failed." error
 - SAP Installation files are currently being **downloaded into the DB instance’s provisioned Amazon EFS share for staging**, folder name is '/media/LaunchWizard-\<LW_Deployment_Name\>'. Each file is uploaded immediately after download, and then deleted from the local storage. This should work for all stacks as the largest file is currently the HANA binary (14.3 GB).
-- Certain download links like **SAPCAR**, **SWPM** and **HANADB** should be checked frequently due to SAP taking the files offline as soon as new patch levels are released. Links to the DVD installer files are more stable but will be taken offline as well once the respective product is being deprecated
+- Certain download links like **SAPCAR**, **SWPM** and **RDB** should be checked frequently due to SAP taking the files offline as soon as new patch levels are released. Links to the DVD installer files are more stable but will be taken offline as well once the respective product is being deprecated
 - Download links for the various software products have been taken from https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-software-install-details.html. For some components, newer versions have been considered.
 - The filenames are fetched via a HEAD request (wget), which might slow things down for larger amounts of files, especially since the **SAP download server sends 2-3 redirects** for certain download links
 - Since all files are currently being downloaded into the EFS share and uploaded into S3 afterwards, an **S3 VPC Endpoint** is highly recommended for performance and cost efficiency.

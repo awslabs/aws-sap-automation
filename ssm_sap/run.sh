@@ -11,8 +11,8 @@ cd /
 mkdir -p aws-sap-automation
 cd aws-sap-automation
 
-aws s3 cp s3://aws-sap-automation/ssm_sap/ ./ssm_sap --recursive
-aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive
+aws s3 cp s3://aws-sap-automation/ssm_sap/ ./ssm_sap --recursive --region eu-central-1
+aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive --region eu-central-1
 chmod +x utils/colors.sh
 chmod +x utils/lw_bootstrap.sh
 chmod +x ssm_sap/lw_discovery.sh

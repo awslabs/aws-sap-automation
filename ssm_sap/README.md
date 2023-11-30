@@ -22,10 +22,10 @@ The result looks as follows. Click 'next' to complete the wizard.
 
 ## Usage post-deployment
 
-Execute the following lines on your **EC2 Instance** (deployed by LW4SAP):
+Execute the following lines on your **EC2 Instance** (deployed by LW4SAP). Make sure to setup your [AWS Region](https://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/setup-credentials.html#setup-credentials-setting-region) in the AWS config file, if not specified:
 
 ```bash
-aws s3 cp s3://aws-sap-automation/ssm_sap/run.sh ./
+aws s3 cp s3://aws-sap-automation/ssm_sap/run.sh ./ --region eu-central-1
 chmod +x run.sh
 ./run.sh
 ```

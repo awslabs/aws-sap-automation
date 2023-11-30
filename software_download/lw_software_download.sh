@@ -20,6 +20,7 @@ if [[ "$1" = "validate" ]]
 then
    FLAG_VALIDATE=true
    SAP_PRODUCT_ID=${2}
+   LW_DEPLOYMENT_SCENARIO=${3}
    echo "Validate Download Links: $FLAG_VALIDATE";
 elif [[ "$1" = "download" ]]
 then
@@ -28,20 +29,20 @@ then
    LW_DEPLOYMENT_NAME=${SAP_PRODUCT_ID}
    echo "LW_DEPLOYMENT_NAME: "$LW_DEPLOYMENT_NAME;
    S3_BUCKET_PREFIX=${3}
-
+   LW_DEPLOYMENT_SCENARIO=${4}
    SAP_SAPCAR_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/SAPCAR"
    SAP_SWPM_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/SWPM"
    SAP_KERNEL_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/KERNEL"
    SAP_EXPORT_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/EXPORT"
-   SAP_HANADB_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/HANADB"
-   SAP_HANACLIENT_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/HANADBCLIENT"
+   SAP_RDB_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/RDB"
+   SAP_RDBCLIENT_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/RDBCLIENT"
 
    echo "SAP_SAPCAR_SOFTWARE_S3_BUCKET: "$SAP_SAPCAR_SOFTWARE_S3_BUCKET;
    echo "SAP_SWPM_SOFTWARE_S3_BUCKET: "$SAP_SWPM_SOFTWARE_S3_BUCKET;
    echo "SAP_KERNEL_SOFTWARE_S3_BUCKET: "$SAP_KERNEL_SOFTWARE_S3_BUCKET;
    echo "SAP_EXPORT_SOFTWARE_S3_BUCKET: "$SAP_EXPORT_SOFTWARE_S3_BUCKET;
-   echo "SAP_HANADB_SOFTWARE_S3_BUCKET: "$SAP_HANADB_SOFTWARE_S3_BUCKET;
-   echo "SAP_HANACLIENT_SOFTWARE_S3_BUCKET: "$SAP_HANACLIENT_SOFTWARE_S3_BUCKET;
+   echo "SAP_RDB_SOFTWARE_S3_BUCKET: "$SAP_RDB_SOFTWARE_S3_BUCKET;
+   echo "SAP_RDBCLIENT_SOFTWARE_S3_BUCKET: "$SAP_RDBCLIENT_SOFTWARE_S3_BUCKET;
 fi
 
 # --- Retrieving LW CloudFormation stack variables ---
@@ -59,28 +60,31 @@ echo ""
 
 # --- Read S-USER ---
 
-echo "Retrieving SAP S-User Credentials from AWS Secrets Manager..."
-echo ""
+echo -n "Retrieving SAP S-User Credentials from AWS Secrets Manager"
 
-S_USER=$(aws secretsmanager get-secret-value --secret-id sap-s-user --query SecretString --output text | grep -oP '(?<="username":")[^"]*')
-S_PASS=$(aws secretsmanager get-secret-value --secret-id sap-s-user --query SecretString --output text | grep -oP '(?<="password":")[^"]*')
+SECRETSTRING=$(aws secretsmanager get-secret-value --secret-id sap-s-user --query SecretString --output text)
+S_USER=$(echo $SECRETSTRING | grep -o '"username":"[^"]*' | grep -o '[^"]*$')
+S_PASS=$(echo $SECRETSTRING | grep -o '"password":"[^"]*' | grep -o '[^"]*$')
 
 if [ -z "$S_USER" ]
 then
+  echo ""
   echo -e "${RED}Error:${NO_COLOR} Secret sap-s-user or properties username/password not found! Check AWS Secrets Manager!"
   exit 1
 fi
 
+echo -e " ${GREEN}...success!${NO_COLOR}"
+
 # --- Validate S-USER ---
 
 echo -n "Validating SAP S-User"
-echo ""
 CHECK_URL="https://softwaredownloads.sap.com/file/0020000001450632021" #SAPEXE_50-80005374.SAR from S/4HANA 2021
 RETURNCODE=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $CHECK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
 if [[ $RETURNCODE -ne 200 && $RETURNCODE -ne 302 ]]
 then 
-  echo -e "${RED}Error:${NO_COLOR} SAP S-User ($S_USER) invalid, please verify username/password! (HTTP "${RETURNCODE}")" 
+  echo ""
+  echo -e "${RED}Error:${NO_COLOR} SAP S-User ($S_USER) or password invalid / expired, please verify! (HTTP "${RETURNCODE}")" 
   exit 1
 fi
 
@@ -93,7 +97,7 @@ echo ""
 echo -n "Parsing Download Links"
 exec < "$DIR/../software_download/links.csv"
 read header
-while IFS=";" read -r ID column2 column3 URL column5 column6 MD5 remaining
+while IFS=";" read -r ID column2 column3 URL column5 DESC MD5 remaining
 do
   #echo "$ID"
   #echo "$URL"
@@ -101,6 +105,7 @@ do
   #echo ""
   declare ${ID}="$URL"
   declare ${ID}_MD5="$MD5"
+  declare ${ID}_DESC="$DESC"
 done
 echo -e " ${GREEN}...success!${NO_COLOR}"
 
@@ -120,6 +125,12 @@ then
 cd $home
 mkdir -p "mymedia"
 MEDIA_PATH="mymedia/LaunchWizard-"$LW_DEPLOYMENT_NAME"/compressed";
+fi
+
+
+if [[ $LW_DEPLOYMENT_SCENARIO = "SapNWOnAseSingle" ]]
+then 
+  SAP_PRODUCT_ID=$SAP_PRODUCT_ID-ase;
 fi
 
 echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
@@ -193,8 +204,13 @@ case $SAP_PRODUCT_ID in
      EXPORTS=9
   ;;
 
-   "sapsolman-7.2")
+  "sapsolman-7.2")
      PRODUCT_PREFIX="SOLMAN72"
+     EXPORTS=4
+  ;;
+
+  "sapsolman-7.2-ase")
+     PRODUCT_PREFIX="SOLMAN72_ASE"
      EXPORTS=4
   ;;
 
@@ -235,18 +251,19 @@ then
 
 
   # Technical Foundation
-  echo "Technical foundation download links"
+  echo "SAP foundation download links"
   echo ""
-  for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM HANACLIENT HANADB 
+  for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB 
   do
     ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
-    SWDC_URL=`echo "${!ITEM_VARIABLE}"`
-
+    SWDC_URL=`echo "${!ITEM_VARIABLE}"`;
+    ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
+    ITEM_DESC=`echo "${!ITEM_DESC_TMP}"`;
 
     # not all stacks necessarily have all the same technical foundation parts (e.g. SAPJVM is only valid for sapsolman-7.2 and sapNetweaverJavaOnly-750)
     if [[ $SWDC_URL != "" ]]
     then
-      echo -n "Validating link " $SWDC_URL "for "${ITEM_VARIABLE}
+      echo -n "Validating link" $SWDC_URL "("$ITEM_DESC") for "${ITEM_VARIABLE}
       WGET_LAST_HTTP_RC=`wget -q -r -U "SAP Download Manager" --max-redirect 1 --timeout=30 --server-response --spider --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
 
       if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
@@ -295,7 +312,7 @@ echo "Preparing technical foundation for $SAP_PRODUCT_ID."
 echo "---------------------------------------------------"
 #echo ""
 
-for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM HANACLIENT HANADB
+for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB
 do
  ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
  ITEM_VARIABLE_MD5=`echo "$PRODUCT_PREFIX"_"$i"_MD5`;
@@ -315,14 +332,14 @@ do
  then
    ITEM_PATH=`echo "$MEDIA_PATH"/kernel`;
    ITEM_BUCKET=$SAP_KERNEL_SOFTWARE_S3_BUCKET;
- elif [[ $i == HANADB ]]
+ elif [[ $i == RDB ]]
  then
    ITEM_PATH=`echo "$MEDIA_PATH"/database`;
-   ITEM_BUCKET=$SAP_HANADB_SOFTWARE_S3_BUCKET;
- elif [[ $i = HANACLIENT ]]
+   ITEM_BUCKET=$SAP_RDB_SOFTWARE_S3_BUCKET;
+ elif [[ $i = RDBCLIENT ]]
  then
    ITEM_PATH=`echo "$MEDIA_PATH"/database_client`;
-   ITEM_BUCKET=$SAP_HANACLIENT_SOFTWARE_S3_BUCKET;
+   ITEM_BUCKET=$SAP_RDBCLIENT_SOFTWARE_S3_BUCKET;
  else
    ITEM_PATH=`echo "$MEDIA_PATH"/`;
  fi
@@ -574,4 +591,5 @@ fi
 
 
 fi
+echo ""
 echo "All done!"
