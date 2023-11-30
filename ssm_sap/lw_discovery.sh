@@ -55,12 +55,12 @@ echo '{"Version": "2012-10-17",
         }
     ]
 }' > mypolicy.json
-DB_SECRET_ID_SSM=$(aws secretsmanager create-secret \
+DB_SECRET_NAME_SSM=$(aws secretsmanager create-secret \
     --name $DB_SECRET_NAME-SSMSAP \
     --description "Use with SSM for SAP" \
     --secret-string "{\"username\":\"SYSTEM\",\"password\":\"$MASTER_PASSWORD\"}" --query 'Name' --output text)
 RES_POLICY=$(aws secretsmanager put-resource-policy \
-    --secret-id $DB_SECRET_ID_SSM \
+    --secret-id $DB_SECRET_NAME_SSM \
     --resource-policy file://mypolicy.json \
     --block-public-policy)
 rm mypolicy.json
@@ -77,7 +77,7 @@ MYSTATUS=$(aws ssm-sap register-application \
 --instances $EC2_INSTANCE_ID \
 --sap-instance-number $SAP_HANA_INSTANCE_NR \
 --sid $SAP_HANA_SID \
---credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$DB_SECRET_ID_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$DB_SECRET_ID_SSM'"}]')
+--credentials '[{"DatabaseName":"'$SAP_HANA_SID'/'$SAP_HANA_SID'","CredentialType":"ADMIN","SecretId":"'$DB_SECRET_NAME_SSM'"},{"DatabaseName":"'$SAP_HANA_SID'/SYSTEMDB","CredentialType":"ADMIN","SecretId":"'$DB_SECRET_NAME_SSM'"}]')
 
 sleep 120
 
