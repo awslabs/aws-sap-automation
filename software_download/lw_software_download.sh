@@ -154,6 +154,11 @@ case $SAP_PRODUCT_ID in
      EXPORTS=1
   ;;
 
+  "sapNetweaver-750-ase")
+     PRODUCT_PREFIX="NW750_ASE"
+     EXPORTS=1
+  ;;
+
   "sapNetweaverJavaOnly-750")
     PRODUCT_PREFIX="NW750_JAVA"
     EXPORTS=1
