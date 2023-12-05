@@ -1,11 +1,11 @@
 # SAP Software Download
 
-Fetches all required artifacts from SAP Software Center to execute AWS Launch Wizard for SAP deployments.
+Fetches all required artifacts from SAP Software Center to execute AWS Launch Wizard for SAP deployments.  
 **Note:** Requires valid SAP-S-User to be maintained in AWS Secrets Manager.
 
 ## Prerequisites (Once only)
 
-- Create new Amazon S3 Bucket **launchwizard-`<AWSAccountID>`** (Note: Bucket Name must contain 'launchwizard' as prefix)
+- Create new Amazon S3 Bucket **launchwizard-`<AWSAccountID>`** - Bucket Name must contain 'launchwizard' as prefix!
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
 - Create a new secret called **sap-s-user** in AWS Secrets Manager:
   - Encryption key: Use default AWS Managed KMS key = **aws/secretsmanager**
@@ -122,7 +122,7 @@ SAP ASE
 
 - Go to [SAP Support Launchpad](https://me.sap.com/softwarecenter)
 - Search for file(s) e.g. SWPM
-- Filter by **Linux on x86_64 64bit**
+- Filter by **Linux on x86_64 64bit** (unicode)
 - Locate latest file and click on **Content Info**
 - Note and replace MD5 Hash as well Object ID in [links.csv](links.csv)
 
