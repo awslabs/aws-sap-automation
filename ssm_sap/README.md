@@ -1,13 +1,13 @@
-# SSM for SAP Registration
+# AWS Systems Manager for SAP Registration
 
-Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard for SAP (LW4SAP) with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html).
+Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard for SAP (LW4SAP) with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html) (SSM4SAP).
 
 ## Prerequisites (Once only)
 
 - Attach the **AWSSystemsManagerForSAPFullAccess** policy to role **AmazonEC2RoleForLaunchWizard**
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
 
-## New AWS Launch Wizard for SAP deployments:
+## New LW4SAP deployments:
 
 In AWS Launch Wizard for SAP, proceed to **Configure deployment model**. 
 In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location:
@@ -20,7 +20,7 @@ The result looks as follows. Click 'next' to complete the wizard.
 
 ![image](lw_post_script.png)
 
-## Existing AWS Launch Wizard for SAP deployments:
+## Existing LW4SAP deployments:
 
 Navigate to AWS Systems Manager → Documents and hit **Create document**. Choose a name and copy and paste the following Content
 
@@ -37,13 +37,15 @@ mainSteps:
     - ./run.sh
 ```
 
-To save, press **Create document**.
+To save, press **Create document**.  
 
-![image](ssm1.png)
+![image](ssm_a.png)
 
-Next, locate your document and press **Run command**. Select your target EC2 instances and press Run.
+Next, locate your document and press **Run command**. Select your target EC2 instances and press **Run**.
 
-![image](ssm2.png)
+![image](ssm_b.png)
+
+Wait until the command has completed successfully. In case the command failed, check the command output/error directly for more information!
 
 ## Troubleshooting
 
