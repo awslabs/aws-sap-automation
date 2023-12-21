@@ -1,0 +1,35 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "awssapautomationtagging",
+            "Effect": "Allow",
+            "Action": [
+                "resource-groups:SearchResources",
+                "tag:TagResources",
+                "tag:GetResources",
+                "ec2:CreateTags",
+                "ec2:DescribeTags",
+                "cloudformation:DescribeStacks",
+                "cloudformation:ListStackResources",
+                "secretsmanager:TagResource",
+                "ssm:AddTagsToResource",
+                "cloudformation:UpdateStack",
+                "elasticfilesystem:CreateTags"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "awssapautomationssmp",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter"
+            ],
+            "Resource": [
+                "arn:aws:ssm:*:*:parameter/sap-custom-tags"
+            ]
+        }
+    ]
+}

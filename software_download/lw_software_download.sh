@@ -4,7 +4,8 @@
 #SPDX-License-Identifier: Apache-2.0
 
 #DESCRIPTION: Script for automatically downloading SAP installation files
-#EXECUTE: Can be run standalone or via AWS Launch Wizard for SAP
+#TYPE: AWS Launch Wizard for SAP - PreConfiguration script
+#EXECUTE: Can be executed standalone or via AWS Launch Wizard for SAP
 #AUTHOR: meyro@, mtoerpe@
 
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )

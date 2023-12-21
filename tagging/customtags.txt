@@ -1,0 +1,3 @@
+ExampleKey1=ExampleValue1
+ExampleKey2=ExampleValue2
+ExampleKey3=ExampleValue3

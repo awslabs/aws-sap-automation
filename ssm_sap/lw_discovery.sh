@@ -4,7 +4,7 @@
 #SPDX-License-Identifier: Apache-2.0
 
 #DESCRIPTION: AWS Launch Wizard for SAP - PostConfiguration script to register single-node HANA and/or SAP AppSrv with SSM for SAP 
-#https://docs.aws.amazon.com/ssm-sap/latest/userguide/what-is-ssm-for-sap.html
+#TYPE: AWS Launch Wizard for SAP - PostConfiguration script
 #EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: mtoerpe@
 
