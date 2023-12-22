@@ -12,9 +12,9 @@
                 "ec2:DescribeTags",
                 "cloudformation:DescribeStacks",
                 "cloudformation:ListStackResources",
+                "cloudformation:UpdateStack",
                 "secretsmanager:TagResource",
                 "ssm:AddTagsToResource",
-                "cloudformation:UpdateStack",
                 "elasticfilesystem:CreateTags"
             ],
             "Resource": [
