@@ -4,7 +4,7 @@ Adds a set of predefined custom tags to all AWS Launch Wizard for SAP deployment
 
 ## Prerequisites (Once only)
 
-- Store custom tags in AWS Systems Manager - Parameter Store: Parameter Name **sap-custom-tags**, Type **StringList**, Value [Key=Value Pairs](customtags.txt) e.g. ExampleKey1=ExampleValue1 ExampleKey2=ExampleValue2 ExampleKey3=ExampleValue3
+- Navigate to AWS Systems Manager -> Parameter Store: [Create](https://console.aws.amazon.com/systems-manager/parameters/aws/create) a new parameter called **sap-custom-tags**, Type **StringList**, Value must be key=value pairs one line each ([Example](customtags.txt))
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
 
 ## New LW4SAP deployments:
@@ -39,11 +39,7 @@ mainSteps:
 
 To save, press **Create document**.  
 
-![image](ssm_a.png)
-
 Next, locate your document and press **Run command**. Select your target EC2 instances and press **Run**.
-
-![image](ssm_b.png)
 
 Wait until the command has completed successfully. In case the command failed, check the command output/error directly for more information!
 

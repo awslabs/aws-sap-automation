@@ -3,7 +3,7 @@
 #Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #SPDX-License-Identifier: Apache-2.0
 
-#DESCRIPTION: Apply a list of custom tags onto all related resources of a given Lauch Wizard for SAP deployment.
+#DESCRIPTION: Applies a list of custom tags onto all related resources of a given Lauch Wizard for SAP deployment.
 #TYPE: AWS Launch Wizard for SAP - PostConfiguration script
 #EXECUTE: Can be executed on any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: cspruell@
