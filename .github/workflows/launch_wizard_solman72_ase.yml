@@ -38,7 +38,7 @@ jobs:
           sudo ./aws/install --update
           aws --version
           MyTimestamp=$(date +%s)
-          StackName=S4TESTRUN-$MyTimestamp
+          StackName=SOLMAN72ASET$MyTimestamp
           echo ${{ secrets.STACK_SOLMAN72ASE }} > stack.json
           DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnAseSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
           sleep 10s

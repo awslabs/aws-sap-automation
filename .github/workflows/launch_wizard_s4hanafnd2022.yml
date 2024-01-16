@@ -38,7 +38,7 @@ jobs:
           sudo ./aws/install --update
           aws --version
           MyTimestamp=$(date +%s)
-          StackName=S4TESTRUN-$MyTimestamp
+          StackName=S4FND22T$MyTimestamp
           echo ${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2022 }} > stack.json
           DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
           sleep 10s
