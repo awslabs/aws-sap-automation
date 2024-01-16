@@ -11,7 +11,7 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 [![SAP software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) <br>
 [![s4hanafoundations-2022](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2022.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2022.yml) <br>
 [![s4hana-2022](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hana2022.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hana2022.yml) <br>
-[![solman72ase](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase.yml) <br>
+[![solman72ase](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase.yml) <br>
 
 ## Found an issue? Anything to add?
 
