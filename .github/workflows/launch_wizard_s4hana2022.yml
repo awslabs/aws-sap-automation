@@ -1,5 +1,5 @@
 #Runs bi-weekly
-name: 'S/4HANA 2022 (SLES15SP4) '
+name: 'S/4HANA 2022 (SLES15SP4)_'
 
 # Controls when the workflow will run
 on:

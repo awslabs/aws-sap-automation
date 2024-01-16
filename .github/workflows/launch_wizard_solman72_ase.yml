@@ -1,5 +1,5 @@
 # SAP Solution Manager 7.2 / SAP ASE / SLES15 SP4 / us-east-1 / Runs bi-weekly
-name: 'Solman 7.2 ASE (SLES15SP4)_'
+name: 'SOLMAN 7.2 ASE (SLES15SP4)_'
 
 # Controls when the workflow will run
 on:
