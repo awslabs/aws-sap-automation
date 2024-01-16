@@ -1,5 +1,5 @@
 #Runs bi-weekly
-name: Download Links
+name: Software Download
 
 # Controls when the workflow will run
 on:
