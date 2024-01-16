@@ -1,4 +1,4 @@
-#Runs manually
+# Upload to S3 Bucket 'aws-sap-automation' / Runs manually
 name: Deploy
 
 # Controls when the workflow will run

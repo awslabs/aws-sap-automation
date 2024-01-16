@@ -1,4 +1,4 @@
-#Runs bi-weekly
+# SAP S/4HANA Foundation 2022 / SAP HANA / RHEL4SAP 8.6 / eu-central-1 / Runs bi-weekly / SAP Software Download & SSM for SAP
 name: 'S/4HANA FND 2022 (RHEL4SAP8.6)_'
 
 # Controls when the workflow will run

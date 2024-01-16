@@ -1,4 +1,4 @@
-#Runs bi-weekly
+# SAP S/4HANA 2022 / SAP HANA / SLES15 SP4 / eu-central-1 / Runs bi-weekly / SAP Software Download & SSM for SAP
 name: 'S/4HANA 2022 (SLES15SP4)_'
 
 # Controls when the workflow will run

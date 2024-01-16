@@ -8,6 +8,9 @@
 #EXECUTE: Can be executed on any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: cspruell@
 
+DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source "$DIR/../utils/lw_bootstrap.sh"
+
 TAGS=$(aws ssm get-parameter --name "sap-custom-tags" --query 'Parameter.Value' --output text)
 echo $TAGS
 
