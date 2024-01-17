@@ -49,6 +49,6 @@ Wait until the command has completed successfully. In case the command failed, c
 
 ## Considerations
 
-- Each resource can have up to 50 tags. For other limits, see Tag Naming and Usage Conventions in the AWS General Reference.
-- Resource Group Tagging API tag-resources, supports only 20 resources at a time
+- Each resource can have up to 50 tags. For other limits, see [Tag Naming and Usage Conventions](https://docs.aws.amazon.com/tag-editor/latest/userguide/tagging.html#tag-conventions) in the AWS General Reference.
+- Resource Group Tagging 'tag-resources' API, supports only 20 resources at a time
 - Tagging CloudFormation Stack managed resources runs into error (DynamoDB staging table no longer exists after deployment) and hence is ignored

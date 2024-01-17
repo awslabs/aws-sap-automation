@@ -31,7 +31,7 @@ RESOURCE_GROUP_ARN_LIST1_CLEAN=""
 COUNT=0
 for word in $RESOURCE_GROUP_ARN_LIST1
 do
-    #Ignore CloudFormationARN & 'None' resources
+    #Ignore CloudFormationARN & 'None' resource(s)
     if [[ ${word} != *"arn:aws:cloudformation"* ]] && [[ ${word} != "None" ]]; then
     echo $COUNT $word
     RESOURCE_GROUP_ARN_LIST1_CLEAN=$(echo "$RESOURCE_GROUP_ARN_LIST1_CLEAN" "$word")
@@ -40,14 +40,16 @@ do
 
     if [[ $COUNT == 20 ]]; then 
     #Tags all resources in the ARN list with all the tags specified, supports only 20 resources at a time
-    aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS
+    OUTPUT=$(aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS)
     RESOURCE_GROUP_ARN_LIST1_CLEAN=""
     fi
 
 done
 
+if [[ $RESOURCE_GROUP_ARN_LIST1_CLEAN != "" ]]; then 
 #Tags all resources in the ARN list with all the tags specified, supports only 20 resources at a time
-aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS
+OUTPUT=$(aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS)
+fi
 
 echo "All done!"
 
