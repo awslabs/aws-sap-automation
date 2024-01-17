@@ -18,15 +18,18 @@ Fetches all required artifacts from SAP Software Center to execute AWS Launch Wi
 ## Usage via AWS Launch Wizard for SAP
 
 In AWS Launch Wizard for SAP, proceed to **Configure deployment model**. 
-In section **Pre-deployment configuration script**, choose the following Amazon S3 URL as script location:
+
+In section **Pre-deployment configuration script**, make sure to **untick** "Proceed with deployment in the event of a configuration script failure".
+
+Next, choose the following Amazon S3 URL as script location:
 
 ```bash
 s3://aws-sap-automation/software_download/run.sh
 ```
 
-Choose **Database (DB) Server** as target server. 
+In case of a distributed deployment, choose **Database (DB) Server** as target server. 
 
-Next, make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
+The result should look as follows:
 
 ![image](lw_pre_script.png)
 

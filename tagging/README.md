@@ -16,9 +16,13 @@ In section **Post-deployment configuration script**, choose the following Amazon
 s3://aws-sap-automation/tagging/run.sh
 ```
 
-In case of a distributed deployment, choose **ASCS/SCS/PAS** AND **AAS** as target server. The result looks as follows. Click 'next' to complete the wizard.
+In case of a distributed deployment, choose **ASCS/SCS/PAS** AND **AAS** as target server. 
+
+The result looks as follows:
 
 ![image](lw_post_script.png)
+
+Click 'next' to complete the wizard.
 
 ## Existing LW4SAP deployments:
 

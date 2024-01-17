@@ -16,9 +16,11 @@ In section **Post-deployment configuration script**, choose the following Amazon
 s3://aws-sap-automation/ssm_sap/run.sh
 ```
 
-The result looks as follows. Click 'next' to complete the wizard.
+The result looks as follows:
 
 ![image](lw_post_script.png)
+
+Click 'next' to complete the wizard.
 
 ## Existing LW4SAP deployments:
 
