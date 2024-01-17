@@ -5,6 +5,7 @@
 
 #DESCRIPTION: Script for automatically downloading SAP installation files
 #TYPE: AWS Launch Wizard for SAP - PreConfiguration script
+#TARGET: SAP DB
 #EXECUTE: Can be executed standalone or via AWS Launch Wizard for SAP
 #AUTHOR: meyro@, mtoerpe@
 

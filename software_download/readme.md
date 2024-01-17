@@ -24,7 +24,9 @@ In section **Pre-deployment configuration script**, choose the following Amazon 
 s3://aws-sap-automation/software_download/run.sh
 ```
 
-Make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
+Choose **Database (DB) Server** as target server. 
+
+Next, make sure to **untick** "Proceed with deployment in the event of a configuration script failure"
 
 ![image](lw_pre_script.png)
 

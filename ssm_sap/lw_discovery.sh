@@ -5,6 +5,7 @@
 
 #DESCRIPTION: AWS Launch Wizard for SAP - PostConfiguration script to register single-node HANA and/or SAP AppSrv with SSM for SAP 
 #TYPE: AWS Launch Wizard for SAP - PostConfiguration script
+#TARGET: SAP DB
 #EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: mtoerpe@
 

@@ -3,9 +3,11 @@
 #Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #SPDX-License-Identifier: Apache-2.0
 
-#DESCRIPTION: AWS Launch Wizard for SAP - PreConfiguration script for automatically downloading SAP installation files
-#EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
-#AUTHOR: mtoerpe@
+#DESCRIPTION: Script for automatically downloading SAP installation files
+#TYPE: AWS Launch Wizard for SAP - PreConfiguration script
+#TARGET: SAP DB
+#EXECUTE: Can be executed standalone or via AWS Launch Wizard for SAP
+#AUTHOR: meyro@, mtoerpe@
 
 cd /
 mkdir -p aws-sap-automation

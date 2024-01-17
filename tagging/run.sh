@@ -3,9 +3,11 @@
 #Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #SPDX-License-Identifier: Apache-2.0
 
-#DESCRIPTION: AWS Launch Wizard for SAP - Post Configuration Script to register SAP HANA DB / ABAP Application Server with AWS Systems Manager for SAP
-#EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
-#AUTHOR: mtoerpe@
+#DESCRIPTION: Applies a list of custom tags onto all related resources of a given Lauch Wizard for SAP deployment.
+#TYPE: AWS Launch Wizard for SAP - PostConfiguration script
+#TARGET: SAP ASCS/PAS
+#EXECUTE: Can be executed on any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
+#AUTHOR: cspruell@
 
 cd /tmp
 mkdir -p aws-sap-automation
