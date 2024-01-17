@@ -19,35 +19,36 @@ then
 echo "Custom tags not found or empty. Please check the Systems Manager - Parameter Store 'sap-custom-tags'!"
 exit 1
 else
-echo "Start tagging..."
+echo "Start tagging the following resources..."
 
 #Using the EC2 Instance ID, locate the Launch Wizard ID
 LAUNCHWIZID=`aws ec2 describe-tags --filters "Name=resource-id,Values=$EC2_INSTANCE_ID" "Name=key,Values=LaunchWizardResourceGroupID" --output=text | cut -f5`
 
 #Using the Launch Wizard ID, returns the ARNs of all resources that have that ID as a tag
-RESOURCE_GROUP_ARN_LIST1=$(aws resource-groups search-resources --max-items 20 --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
+RESOURCE_GROUP_ARN_LIST1=$(aws resource-groups search-resources --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
 
-#Remove CloudFormationARN & 'None' resources
 RESOURCE_GROUP_ARN_LIST1_CLEAN=""
+COUNT=0
 for word in $RESOURCE_GROUP_ARN_LIST1
 do
-    echo $word
+    #Ignore CloudFormationARN & 'None' resources
     if [[ ${word} != *"arn:aws:cloudformation"* ]] && [[ ${word} != "None" ]]; then
+    echo $COUNT $word
     RESOURCE_GROUP_ARN_LIST1_CLEAN=$(echo "$RESOURCE_GROUP_ARN_LIST1_CLEAN" "$word")
+    COUNT=$((COUNT+1))
     fi
+
+    if [[ $COUNT == 20 ]]; then 
+    #Tags all resources in the ARN list with all the tags specified, supports only 20 resources at a time
+    aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS
+    RESOURCE_GROUP_ARN_LIST1_CLEAN=""
+    fi
+
 done
 
 #Tags all resources in the ARN list with all the tags specified, supports only 20 resources at a time
 aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS
 
-NEXTTOKEN=$(aws resource-groups search-resources --max-items 20 --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'NextToken')
-if [[ $NEXTTOKEN == "" ]]; 
-then
 echo "All done!"
-else
-RESOURCE_GROUP_ARN_LIST2=$(aws resource-groups search-resources --starting-token $NEXTTOKEN --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
-aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST2 --tags $TAGS
-echo "All done!"
-fi
 
 fi
