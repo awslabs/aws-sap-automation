@@ -25,10 +25,29 @@ echo "Start tagging..."
 LAUNCHWIZID=`aws ec2 describe-tags --filters "Name=resource-id,Values=$EC2_INSTANCE_ID" "Name=key,Values=LaunchWizardResourceGroupID" --output=text | cut -f5`
 
 #Using the Launch Wizard ID, returns the ARNs of all resources that have that ID as a tag
-RESOURCE_GROUP_ARN_LIST=$(aws resource-groups search-resources --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
+RESOURCE_GROUP_ARN_LIST1=$(aws resource-groups search-resources --max-items 20 --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
 
-#Using the Resource Group Tagging API, tags all resources in the ARN list with all the tags in the tagsfile.txt file.
-aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST --tags $TAGS
+#Remove CloudFormationARN & 'None' resources
+RESOURCE_GROUP_ARN_LIST1_CLEAN=""
+for word in $RESOURCE_GROUP_ARN_LIST1
+do
+    echo $word
+    if [[ ${word} != *"arn:aws:cloudformation"* ]] && [[ ${word} != "None" ]]; then
+    RESOURCE_GROUP_ARN_LIST1_CLEAN=$(echo "$RESOURCE_GROUP_ARN_LIST1_CLEAN" "$word")
+    fi
+done
+
+#Tags all resources in the ARN list with all the tags specified, supports only 20 resources at a time
+aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST1_CLEAN --tags $TAGS
+
+NEXTTOKEN=$(aws resource-groups search-resources --max-items 20 --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'NextToken')
+if [[ $NEXTTOKEN == "" ]]; 
+then
+echo "All done!"
+else
+RESOURCE_GROUP_ARN_LIST2=$(aws resource-groups search-resources --starting-token $NEXTTOKEN --resource-query '{"Type":"TAG_FILTERS_1_0", "Query":"{\"ResourceTypeFilters\":[\"AWS::AllSupported\"],\"TagFilters\":[{\"Key\":\"LaunchWizardResourceGroupID\",\"Values\":[\"'$LAUNCHWIZID'\"]}]}"}' --query 'ResourceIdentifiers[].ResourceArn' --output text)
+aws resourcegroupstaggingapi tag-resources --resource-arn-list $RESOURCE_GROUP_ARN_LIST2 --tags $TAGS
+echo "All done!"
 fi
 
-echo "All done!"
+fi
