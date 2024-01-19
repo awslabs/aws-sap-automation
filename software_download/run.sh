@@ -9,7 +9,7 @@
 #EXECUTE: Can be executed standalone or via AWS Launch Wizard for SAP
 #AUTHOR: meyro@, mtoerpe@
 
-cd /
+cd /tmp
 mkdir -p aws-sap-automation
 cd aws-sap-automation
 

@@ -9,7 +9,7 @@
 #EXECUTE: Can be run from any EC2 instance, that has been provisioned by AWS Launch Wizard for SAP
 #AUTHOR: mtoerpe@
 
-cd /
+cd /tmp
 mkdir -p aws-sap-automation
 cd aws-sap-automation
 

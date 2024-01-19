@@ -327,7 +327,7 @@ echo ""
 echo "---------------------------------------------------"
 echo "Preparing technical foundation for $SAP_PRODUCT_ID."
 echo "---------------------------------------------------"
-#echo ""
+echo ""
 
 for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB
 do
@@ -335,6 +335,8 @@ do
  ITEM_VARIABLE_MD5=`echo "$PRODUCT_PREFIX"_"$i"_MD5`;
  SWDC_URL=`echo "${!ITEM_VARIABLE}"`
  SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`
+ ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
+ ITEM_DESC=`echo "${!ITEM_DESC_TMP}"`;
 
 
  if [[ $i == SAPCAR ]]
@@ -361,14 +363,15 @@ do
    ITEM_PATH=`echo "$MEDIA_PATH"/`;
  fi
  
+ echo -n "Processing "$ITEM_DESC" ("${ITEM_VARIABLE}")"
 
-  # not all stacks necessarily have all the same technical foundation parts (e.g. SAPJVM is only valid for sapsolman-7.2 and sapNetweaverJavaOnly-750)
+ # retrieve filename
   if [[ $SWDC_URL != "" ]]
   then
     FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
   fi
 
-
+ # if file does not already exist in S3, download
  if [[ $FILENAME ]]
  then
 
@@ -376,8 +379,7 @@ do
     S3_HEAD=$(aws s3 ls "$ITEM_BUCKET/$FILENAME" | grep -v "/$" | wc -l | tr -d ' ')
     if [[ S3_HEAD -eq "1" ]]
     then
-       echo ""
-       echo -e "Already found a file $FILENAME in bucket $ITEM_BUCKET ${YELLOW}... skipping${NO_COLOR}"
+       echo -e "Already found a file $FILENAME in bucket $ITEM_BUCKET ${YELLOW}... skipping download${NO_COLOR}"
        SKIPPED_FILES+=$ITEM_VARIABLE"\n"
        continue;
     fi
@@ -386,7 +388,6 @@ do
     FAILED_CHECKSUM_RETRIES=0
     while [[ FAILED_CHECKSUM_RETRIES -le 1 ]]
     do
-        echo ""
         echo -n "Downloading "$FILENAME;
         WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL`;
 
@@ -478,8 +479,7 @@ do
     S3_HEAD=$(aws s3 ls "$ITEM_BUCKET/$FILENAME" | grep -v "/$" | wc -l | tr -d ' ')
     if [[ S3_HEAD -eq "1" ]]
     then
-       echo ""
-       echo -e "Already found a file $FILENAME in bucket $ITEM_BUCKET ${YELLOW}... skipping${NO_COLOR}"
+       echo -e "Already found a file $FILENAME in bucket $ITEM_BUCKET ${YELLOW}... skipping download${NO_COLOR}"
        SKIPPED_FILES+=$ITEM_VARIABLE"\n"
        continue;
     fi
@@ -489,7 +489,6 @@ do
     FAILED_CHECKSUM_RETRIES=0
     while [[ FAILED_CHECKSUM_RETRIES -le 1 ]]
     do
-        echo ""
         echo -n "Downloading $SAP_PRODUCT_ID export filename: "$FILENAME;
         WGET_RC=`wget -q -P "$ITEM_PATH" -U "SAP Download Manager" --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL;`
 

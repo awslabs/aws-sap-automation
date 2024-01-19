@@ -16,7 +16,7 @@ In section **Post-deployment configuration script**, choose the following Amazon
 s3://aws-sap-automation/ssm_sap/run.sh
 ```
 
-The result looks as follows:
+The result looks as follows, the error message "Invalid S3 Bucket" can be ignored:
 
 ![image](lw_post_script.png)
 
@@ -57,6 +57,7 @@ Wait until the command has completed successfully. In case the command failed, c
 
 ## Considerations
 
-- Currently only single-node HANA-based deployments are supported!
+- Currently only single-node SAP HANA-based deployments are supported!
 - SAP Application Server registration depends on saphostctrl information
 - By default, you can only register up to 10 applications in AWS Systems Manager for SAP per AWS Account per AWS Region. For more make sure to increase your [quota](https://docs.aws.amazon.com/general/latest/gr/ssm-sap.html#limits_ssm-sap).
+- Once executed successfully, you may cleanup the artifacts in directory **/tmp/aws-sap-automation**

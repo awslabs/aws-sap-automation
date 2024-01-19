@@ -10,7 +10,7 @@ Adds a set of predefined custom tags to all AWS Launch Wizard for SAP deployment
 ## New LW4SAP deployments:
 
 In AWS Launch Wizard for SAP, proceed to **Configure deployment model**. 
-In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location:
+In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location.:
 
 ```bash
 s3://aws-sap-automation/tagging/run.sh
@@ -18,7 +18,7 @@ s3://aws-sap-automation/tagging/run.sh
 
 In case of a distributed deployment, choose **ASCS/SCS/PAS** AND **AAS** as target server. 
 
-The result looks as follows:
+The result looks as follows, the error message "Invalid S3 Bucket" can be ignored:
 
 ![image](lw_post_script.png)
 
@@ -56,3 +56,4 @@ Wait until the command has completed successfully. In case the command failed, c
 - Each resource can have up to 50 tags. For other limits, see [Tag Naming and Usage Conventions](https://docs.aws.amazon.com/tag-editor/latest/userguide/tagging.html#tag-conventions) in the AWS General Reference.
 - Resource Group Tagging 'tag-resources' API, supports only 20 resources at a time
 - Tagging CloudFormation Stack managed resources runs into error (DynamoDB staging table no longer exists after deployment) and hence is ignored
+- Once executed successfully, you may cleanup the artifacts in directory **/tmp/aws-sap-automation**
