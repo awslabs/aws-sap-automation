@@ -362,17 +362,18 @@ do
  else
    ITEM_PATH=`echo "$MEDIA_PATH"/`;
  fi
- 
- echo -n "Processing "$ITEM_DESC" ("${ITEM_VARIABLE}")"
 
  # retrieve filename
-  if [[ $SWDC_URL != "" ]]
-  then
-    FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
-  fi
+ if [[ $SWDC_URL != "" ]]
+ then
+  echo "" 
+  echo -n "Processing "$ITEM_DESC" ("${ITEM_VARIABLE}")"
+  echo ""
+  FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
+ fi
 
  # if file does not already exist in S3, download
- if [[ $FILENAME ]]
+ if [[ $SWDC_URL != "" ]] && [[ $FILENAME ]]
  then
 
     # Is the file already present in the respective bucket? 
@@ -455,9 +456,9 @@ done # End for-do-done loop
 
 echo ""
 echo "-----------------------------------------------------"
-echo "Preparing SAP application export for $SAP_PRODUCT_ID"
+echo "Preparing application exports for $SAP_PRODUCT_ID"
 echo "-----------------------------------------------------"
-#echo ""
+echo ""
 
 ITEM_PATH=`echo "$MEDIA_PATH"/exports`;
 ITEM_BUCKET=$SAP_EXPORT_SOFTWARE_S3_BUCKET;
