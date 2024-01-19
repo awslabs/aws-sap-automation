@@ -370,11 +370,10 @@ do
   echo -n "Processing "$ITEM_DESC" ("${ITEM_VARIABLE}")"
   echo ""
   FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
- fi
 
- # if file does not already exist in S3, download
- if [[ $SWDC_URL != "" ]] && [[ $FILENAME ]]
- then
+  # if file does not already exist in S3, download TODO ERROR
+  if [[ $FILENAME ]]
+  then
 
     # Is the file already present in the respective bucket? 
     S3_HEAD=$(aws s3 ls "$ITEM_BUCKET/$FILENAME" | grep -v "/$" | wc -l | tr -d ' ')
@@ -445,12 +444,14 @@ do
         break;      
     fi
 
- else
+  else
     echo ""
     echo -e "${RED}Error:${NO_COLOR} Could not determine the filename for "$ITEM_VARIABLE" from SAP's servers, wget exit code: "$?", is the URL still valid?"
     FAILED_DOWNLOADS+=$ITEM_VARIABLE"\n"
+  fi
+
  fi
- 
+
 done # End for-do-done loop
 
 
