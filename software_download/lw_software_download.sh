@@ -571,7 +571,7 @@ SKIPPED_FILES_COUNT=`echo -ne $SKIPPED_FILES | wc -l`     # echo -ne as last new
 
 if [[ $SKIPPED_FILES_COUNT -gt 0 ]]
 then
-  echo -e "${YELLOW}$SKIPPED_FILES_COUNT were skipped due to a file with the same name already being present on the respective S3 bucket!${NO_COLOR}"
+  echo -e "${YELLOW}$SKIPPED_FILES_COUNT file(s) were skipped due to a file with the same name already being present in the respective S3 bucket!${NO_COLOR}"
   echo ""
 fi
 
@@ -589,7 +589,7 @@ fi
 
 if [[ $FAILED_UPLOADS_COUNT -gt 0 ]]
 then
-  echo -e "${RED}Error:${NO_COLOR} $FAILED_UPLOADS_COUNT files failed to upload: "
+  echo -e "${RED}Error:${NO_COLOR} $FAILED_UPLOADS_COUNT file(s) failed to upload: "
   echo -e "- "$FAILED_UPLOADS
 elif [[ $((FAILED_UPLOADS_COUNT+SUCCESSFUL_UPLOADS_COUNT)) -eq 0 ]]
 then

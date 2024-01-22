@@ -144,7 +144,7 @@ SAP ASE
 - **SAP S-User passwords expire after 6 months** and have to be changed in the SAP Me Portal, otherwise the script will throw a "Username/Password Authentication Failed." error
 - SAP Installation files are currently being **downloaded into the DB instance’s provisioned Amazon EFS share for staging**, folder name is '/media/LaunchWizard-\<LW_Deployment_Name\>'. Each file is uploaded immediately after download, and then deleted from the local storage. This should work for all stacks as the largest file is currently the HANA binary (14.3 GB).
 - While we try to ensure working consistent download links, for some components e.g. **SAPCAR**, **SWPM** and **RDB**, SAP is taking the files offline as soon as new patch levels are released.
-- The filenames are fetched via a HEAD request (wget), which might slow things down for larger amounts of files, especially since the **SAP download server sends 2-3 redirects** for certain download links
+- The filenames are fetched via a HEAD request (wget), which might slow things down for larger amounts of files, especially since the SAP download server sends 2-3 redirects for certain download links
 - Since all files are currently being downloaded into the EFS share and uploaded into S3 afterwards, an **S3 VPC Endpoint** is highly recommended for performance and cost efficiency.
 - The longest runtime of about 20-30 minutes is observed for the s4hana2021 stack (Note: Launch Wizard caps overall pre-script runtime at 45 minutes).
 - Launch Wizard places the pre-deployment scripts in **/root/install/scripts** on the respective host and names them 'preConfiguration-\<number\>'

@@ -23,7 +23,7 @@ exit 1
 else
 echo "Start tagging the following resources..."
 
-#Using the EC2 Instance ID, locate the Launch Wizard ID
+#Using the EC2 Instance ID, locate the Launch Wizard Resource Group ID
 LAUNCHWIZID=`aws ec2 describe-tags --filters "Name=resource-id,Values=$EC2_INSTANCE_ID" "Name=key,Values=LaunchWizardResourceGroupID" --output=text | cut -f5`
 
 #Using the Launch Wizard ID, returns the ARNs of all resources that have that ID as a tag
