@@ -41,16 +41,16 @@ function download()
 
   # --- Validate ABAP SDK download link ---
 
-  echo -ne "${YELLOW}Validating link for ABAP SDK:${NO_COLOR}" $ABAPSDK_URL
-  WGET_LAST_HTTP_RC=`wget -q --spider --server-response $ABAPSDK_URL 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}'`
+  echo -ne "${YELLOW}Validating link for ABAP SDK:${NO_COLOR} $ABAPSDK_URL"
+  WGET_LAST_HTTP_RC=$(wget -q --spider --server-response "$ABAPSDK_URL" 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}')
 
   if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302 ]]
   then 
-    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
     echo "Error: ABAP SDK download link is not valid!"
     exit 1
   else
-    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
   fi
     
   # --- Download & unpack ABAP SDK files---
@@ -62,40 +62,41 @@ function download()
   echo ""
 
 
-  echo -n "Downloading" `basename $ABAPSDK_URL` "to $MEDIA_PATH";
-  WGET_RC=`wget -q -P $MEDIA_PATH $ABAPSDK_URL`
+  echo -n "Downloading $(basename "$ABAPSDK_URL") to $MEDIA_PATH";
+  WGET_LAST_HTTP_RC=$(wget -q --server-response -P "$MEDIA_PATH" "$ABAPSDK_URL" 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}')
 
-  if [[ $WGET_RC -ne 0 ]]
+  if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302  ]]
   then 
-    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
     echo "Error: Failure during download of ABAP SDK files!"
     exit 1
   else
-    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
   fi
 
 
-  echo -n "Downloading" `basename $ABAPSDK_SIG_URL` "to $MEDIA_PATH";
-  WGET_RC=`wget -q -P $MEDIA_PATH $ABAPSDK_SIG_URL`
+  echo -n "Downloading $(basename "$ABAPSDK_SIG_URL") to $MEDIA_PATH";
+  WGET_LAST_HTTP_RC=$(wget -q --server-response -P "$MEDIA_PATH" "$ABAPSDK_SIG_URL" 2>&1 | grep -e "HTTP/*" | tail -1 | awk  '{print $2}')
 
-  if [[ $WGET_RC -ne 0 ]]
+  if [[ $WGET_LAST_HTTP_RC -ne 200 && $WGET_LAST_HTTP_RC -ne 302  ]]
   then 
-    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${RED}...failed!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
     echo "Error: Failure during download of ABAP SDK signature!"
     exit 1
   else
-    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: "${WGET_LAST_HTTP_RC}")"
+    echo -e " ${GREEN}...success!${NO_COLOR} (HTTP code: ${WGET_LAST_HTTP_RC})"
   fi
 
 
+
   echo ""
-  echo -ne "${YELLOW}Validating file integrity of" `basename $ABAPSDK_URL` "${NO_COLOR}";
+  echo -ne "${YELLOW}Validating file integrity of $(basename "$ABAPSDK_URL") ${NO_COLOR}";
 
-  echo $ABAPSDK_SIGNING_KEY > $MEDIA_PATH/abapsdk-signing-key.pem;
+  echo "$ABAPSDK_SIGNING_KEY" > "$MEDIA_PATH"/abapsdk-signing-key.pem;
 
-  OPENSSL_VERFIY_RC=`openssl dgst -sha256 -verify abapsdk-signing-key.pem -keyform PEM -signature abapsdk-LATEST.sig abapsdk-LATEST.zip`
 
-  if [[ $WGET_RC -ne 0 ]]
+
+  if ! openssl dgst -sha256 -verify abapsdk-signing-key.pem -keyform PEM -signature abapsdk-LATEST.sig abapsdk-LATEST.zip
   then 
     echo -e " ${RED}...failed!${NO_COLOR}"
     echo "Error: Failure during verification of ABAP SDK signature with signing key!"
@@ -105,18 +106,80 @@ function download()
   fi
 
   echo ""
-  echo -n "Unzipping contents of" `basename $ABAPSDK_URL` "to" $MEDIA_PATH;
+  echo -n "Unzipping contents of $(basename $ABAPSDK_URL) to $MEDIA_PATH";
 
-  UNZIP_RC=`unzip -o -q abapsdk-LATEST.zip -d $MEDIA_PATH`
-  chmod -R 755 $MEDIA_PATH
 
-  if [[ $UNZIP_RC -ne 0 ]]
+  if ! unzip -o -q abapsdk-LATEST.zip -d "$MEDIA_PATH"
   then 
     echo -e " ${RED}...failed!${NO_COLOR}"
     exit 1
   else
     echo -e " ${GREEN}...success!${NO_COLOR}"
   fi
+
+  chmod -R 755 "$MEDIA_PATH"
+
+  echo ""
+}
+
+
+# --- OPTIONAL: Generate temporary transport profile (also optional: domain.cfg) ---
+function generate_transport_profile() 
+{
+  MEDIA_PATH=$1
+  SAP_SID=$2
+  #SAP_CI_HOSTNAME=$3
+  #SAP_CI_INSTANCE_NR=$4
+  SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
+  SAP_TRANSPORT_PROFILE="TP_DOMAIN_$SAP_SID.PFL"
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
+  #SAP_DOMAIN_CFG="DOMAIN.CFG"
+
+  echo -e "${YELLOW}Generating temporary transport profile${NO_COLOR}" "$SAP_TRANSPORT_PROFILE" "${YELLOW}in${NO_COLOR} $SAP_TRANSPORT_DIRECTORY/bin ${YELLOW}with the following contents:${NO_COLOR}";
+  echo ""
+  # SAP Help Portal - SAP NetWeaver 7.4.15 - Change and Transport System - Transport Profile 
+  # https://help.sap.com/docs/SAP_NETWEAVER_740/4a368c163b08418890a406d413933ba7/3dad5b9b4ebc11d182bf0000e829fbfe.html?version=7.4.15&q=software
+
+  sudo -i -u "$SAP_SIDADM" echo "
+#TMS:0001:DOMAIN_$SAP_SID\n
+#\n
+#Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
+#\n
+#\n
+TRANSDIR            = $SAP_TRANSPORT_DIRECTORY\n
+#\n
+AWS/DUMMY           = 1\n
+AWS/NBUFFORM        = 1\n
+AWS/TP_VERSION      = 380\n
+#\n
+$SAP_SID/ABAPNTFMODE     = b\n
+$SAP_SID/MT_MODE         = AUTO\n
+$SAP_SID/NBUFFORM        = 1\n
+$SAP_SID/TP_VERSION      = 380\n
+" | sudo -i -u "$SAP_SIDADM" tee "$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE"
+
+  echo -e " ${GREEN}...done!${NO_COLOR}"
+  echo ""
+  ########
+  #echo -n "Generating temporary transport domain " $SAP_DOMAIN_CFG;
+  #
+  #sudo -i -u $SAP_SIDADM echo "
+#Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
+#$SAP_CI_HOSTNAME\n
+#$SAP_CI_INSTANCE_NR\n
+#\n
+#DOMAIN_$SAP_SID\n
+#Transport domain $SAP_SID\n
+#$SAP_SID\n
+#System $SAP_SID\n
+#$SAP_SID\n
+#System $SAP_SID\n
+#GROUP_$SAP_SID\n
+#Transport group $SAP_SID\n
+#" | sudo -i -u "$SAP_SIDADM" tee $SAP_TRANSPORT_DIRECTORY/bin/$SAP_DOMAIN_CFG
+  #
+  #echo -e " ${GREEN}...done!${NO_COLOR}"
+  #########
 }
 
 
@@ -125,16 +188,18 @@ function copy_transport_files()
   MEDIA_PATH=$1
   SAP_SID=$2
   SAP_TRANSPORT_DIRECTORY=$3
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
 
-  echo "Copying ABAP SDK Cofiles and Datafiles"
+  echo -e "${YELLOW}Copying ABAP SDK Cofiles and Datafiles${NO_COLOR}"
   echo ""
-  for i in `ls $MEDIA_PATH/transports/`
+  for i in "$MEDIA_PATH"/transports/*
   do
-    echo -n "Copying" `basename $(ls $MEDIA_PATH/transports/$i/K*.AWS)` "($i) to" $SAP_TRANSPORT_DIRECTORY/cofiles "as" $SAP_SIDADM;
-    sudo -i -u $SAP_SIDADM cp $MEDIA_PATH/transports/$i/K*.AWS $SAP_TRANSPORT_DIRECTORY/cofiles/;
+    PACKAGE_NAME="$(basename $i)"
 
-    if [[ $? -ne 0 ]]
+
+    echo -n "Copying" $(basename $i/K*.AWS) "($PACKAGE_NAME) to $SAP_TRANSPORT_DIRECTORY/cofiles as $SAP_SIDADM";
+
+    if ! sudo -i -u "$SAP_SIDADM" cp $i/K*.AWS "$SAP_TRANSPORT_DIRECTORY/cofiles/"
     then 
       echo -e " ${RED}...failed!${NO_COLOR}"
       exit 1;
@@ -142,10 +207,10 @@ function copy_transport_files()
       echo -e " ${GREEN}...success!${NO_COLOR}"
     fi 
 
-    echo -n "Copying" `basename $(ls $MEDIA_PATH/transports/$i/R*.AWS)` "($i) to" $SAP_TRANSPORT_DIRECTORY/data "as" $SAP_SIDADM;
-    sudo -i -u $SAP_SIDADM cp $MEDIA_PATH/transports/$i/R*.AWS $SAP_TRANSPORT_DIRECTORY/data/;
 
-    if [[ $? -ne 0 ]]
+    echo -n "Copying" $(basename $i/R*.AWS) "($PACKAGE_NAME) to $SAP_TRANSPORT_DIRECTORY/data as $SAP_SIDADM";
+
+    if ! sudo -i -u "$SAP_SIDADM" cp $i/R*.AWS "$SAP_TRANSPORT_DIRECTORY/data/"
     then 
       echo -e " ${RED}...failed!${NO_COLOR}"
       exit 1;
@@ -162,64 +227,7 @@ function copy_transport_files()
 
 
 
-# --- OPTIONAL: Generate temporary transport profile (also optional: domain.cfg) ---
-function generate_transport_profile() 
-{
-  MEDIA_PATH=$1
-  SAP_SID=$2
-  #SAP_CI_HOSTNAME=$3
-  #SAP_CI_INSTANCE_NR=$4
-  SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
-  SAP_TRANSPORT_PROFILE="TP_DOMAIN_$SAP_SID.PFL"
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
-  #SAP_DOMAIN_CFG="DOMAIN.CFG"
 
-  echo -n "Generating temporary transport profile" $SAP_TRANSPORT_PROFILE;
-
-  # SAP Help Portal - SAP NetWeaver 7.4.15 - Change and Transport System - Transport Profile 
-  # https://help.sap.com/docs/SAP_NETWEAVER_740/4a368c163b08418890a406d413933ba7/3dad5b9b4ebc11d182bf0000e829fbfe.html?version=7.4.15&q=software
-
-  sudo -i -u $SAP_SIDADM echo "
-  #TMS:0001:DOMAIN_$SAP_SID\n
-  #\n
-  #Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
-  #\n
-  #\n
-  TRANSDIR            = $SAP_TRANSPORT_DIRECTORY\n
-  #\n
-  AWS/DUMMY           = 1
-  AWS/NBUFFORM        = 1
-  AWS/TP_VERSION      = 380
-  #\n
-  $SAP_SID/ABAPNTFMODE     = b\n
-  $SAP_SID/MT_MODE         = AUTO\n
-  $SAP_SID/NBUFFORM        = 1\n
-  $SAP_SID/TP_VERSION      = 380\n
-  " > $SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE
-
-  echo -e " ${GREEN}...done!${NO_COLOR}"
-
-  ########
-  #echo -n "Generating temporary transport domain " $SAP_DOMAIN_CFG;
-  #
-  #sudo -i -u $SAP_SIDADM echo "
-  #Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
-  #$SAP_CI_HOSTNAME\n
-  #$SAP_CI_INSTANCE_NR\n
-  #\n
-  #DOMAIN_$SAP_SID\n
-  #Transport domain $SAP_SID\n
-  #$SAP_SID\n
-  #System $SAP_SID\n
-  #$SAP_SID\n
-  #System $SAP_SID\n
-  #GROUP_$SAP_SID\n
-  #Transport group $SAP_SID\n
-  #" > $SAP_TRANSPORT_DIRECTORY/bin/$SAP_DOMAIN_CFG
-  #
-  #echo -e " ${GREEN}...done!${NO_COLOR}"
-  #########
-}
 
 
 function addtobuffer()
@@ -228,7 +236,7 @@ function addtobuffer()
   SAP_SID=$2
   SAP_TRANSPORT_DIRECTORY=$3
   SAP_TRANSPORT_PROFILE=$4
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
 
   echo ""
   echo "-----------------------------------------------------------"
@@ -236,12 +244,13 @@ function addtobuffer()
   echo "-----------------------------------------------------------"
   echo ""
 
-  for i in `ls $MEDIA_PATH/transports`;
+  for i in "$MEDIA_PATH"/transports/*;
   do 
-    echo -e "${YELLOW}Adding AWS" `ls $MEDIA_PATH/transports/$i/K*` "($i) to buffer${NO_COLOR}";
-    sudo -i -u $SAP_SIDADM tp addtobuffer AWS$(basename -s .AWS $MEDIA_PATH/transports/$i/K*) $SAP_SID pf=$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE 
+    PACKAGE_NAME="$(basename $i)"
+
+    echo -e "${YELLOW}Adding" $(basename $i/K*) "($PACKAGE_NAME) to buffer of transport system $SAP_SID${NO_COLOR}";
     
-    if [[ $? -ne 0 ]]
+    if ! sudo -i -u "$SAP_SIDADM" tp addtobuffer "AWS$(basename -s .AWS $i/K*)" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE"
     then 
       echo -e " ${RED}...failed!${NO_COLOR}"
       break
@@ -249,6 +258,16 @@ function addtobuffer()
       echo -e " ${GREEN}...success!${NO_COLOR}"
     fi 
   done
+
+# echo -e "${YELLOW}Adding ABAP SDK core transport" $(basename $MEDIA_PATH/transports/core/K*) "($PACKAGE_NAME) to buffer of transport system $SAP_SID${NO_COLOR}";
+#
+#  if ! sudo -i -u "$SAP_SIDADM" tp addtobuffer "AWS$(basename -s .AWS $MEDIA_PATH/transports/core/K*)" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE"
+#  then 
+#    echo -e " ${RED}...failed!${NO_COLOR}"
+#  else
+#    echo -e " ${GREEN}...success!${NO_COLOR}"
+#  fi 
+  
 
   echo ""
 }
@@ -261,12 +280,13 @@ function importcore()
   SAP_IMPORT_CLIENT=$3
   SAP_TRANSPORT_DIRECTORY=$4
   SAP_TRANSPORT_PROFILE=$5
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
-  CORE_TRANSPORT_ID=`echo "AWS"$(basename -s .AWS $MEDIA_PATH/transports/core/K*)`
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
+  CORE_TRANSPORT_ID="AWS$(basename -s .AWS $MEDIA_PATH/transports/core/K*)"
   
   # https://help.sap.com/doc/saphelp_nw73ehp1/7.31.19/en-us/3d/ad5b814ebc11d182bf0000e829fbfe/content.htm?no_cache=true
-  echo -e "${YELLOW}Importing AWS SDK for SAP ABAP core transports into" $SAP_SID "with client" $SAP_IMPORT_CLIENT "${NO_COLOR}";
-  sudo -i -u $SAP_SIDADM tp import $CORE_TRANSPORT_ID $SAP_SID pf=$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE client=$SAP_IMPORT_CLIENT U41
+  # tp seems to return 0 even if there were warnings :-(
+  echo -e "${YELLOW}Importing AWS SDK for SAP ABAP core transports into $SAP_SID with client $SAP_IMPORT_CLIENT ${NO_COLOR}";
+  sudo -i -u "$SAP_SIDADM" tp import "$CORE_TRANSPORT_ID" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE" client="$SAP_IMPORT_CLIENT" U41
   echo ""
 }
 
@@ -276,22 +296,21 @@ function print_usage()
   echo ""
 	echo "Usage:"
   echo ""
-  echo -e "${YELLOW}Postscript mode:${NO_COLOR} $0 lwpostscript { downloadandcopy | addtobuffer | import } [ pf=</path/to/custom/transport.pfl> ]"
-  echo -e "${YELLOW}Standalone mode:${NO_COLOR} $0 standalone { downloadandcopy | addtobuffer | import } sapsid=<###> instancenr=<##> [ client=<###> ] [ pf=/path/to/custom/transport.pfl ]"
+  echo -e "${YELLOW}Postscript mode:${NO_COLOR} $0 lwpostscript { downloadandcopy | addtobuffer | importcore } [ pf=</path/to/custom/transport.pfl> ]"
+  echo -e "${YELLOW}Standalone mode:${NO_COLOR} $0 standalone { downloadandcopy | addtobuffer | importcore } sapsid=<###> instancenr=<##> [ client=<###> ] [ pf=/path/to/custom/transport.pfl ]"
   echo ""
   echo -e "${YELLOW}Example: $0 lwpostscript addtobuffer${NO_COLOR}"
-  echo "Downloads ABAP SDK files during LW post-script execution and adds them to the SAP system's buffer with a generated transport profile (default)."
+  echo "Downloads ABAP SDK files during LW post-script execution and adds the core transport to the SAP system's buffer with a generated transport profile."
   echo ""
-  echo -e "${YELLOW}Example: $0 standalone import sapsid=S4H instancenr=00 client=100 pf=/usr/sap/trans/bin/TP_DOMAIN_DDD.PFL${NO_COLOR}"
-  echo "Downloads ABAP SDK files outside the scope of an LW installation and imports them to a running SAP system, using the provided transport profile and client 100."
+  echo -e "${YELLOW}Example: $0 standalone importcore sapsid=S4H instancenr=00 client=100 pf=/usr/sap/trans/bin/TP_DOMAIN_DDD.PFL${NO_COLOR}"
+  echo "Downloads ABAP SDK files outside the scope of an LW installation and imports the core transport into a running SAP system, using the provided transport profile and client 100."
   echo ""
-  echo -e "${YELLOW}Example: $0 lwpostscript import pf=/usr/sap/trans/bin/TP_DOMAIN_AWD.PFL${NO_COLOR}"
-  echo "Downloads ABAP SDK files during LW post-script execution and imports them into the SAP system, using the provided transport profile and client 000 (default)." 
+  echo -e "${YELLOW}Example: $0 lwpostscript importcore pf=/usr/sap/trans/bin/TP_DOMAIN_AWD.PFL${NO_COLOR}"
+  echo "Downloads ABAP SDK files during LW post-script execution and imports the core transport into the SAP system under deployment, using the provided transport profile and client 000 (default)." 
   echo ""
   echo -e "${YELLOW}Example: $0 standalone downloadandcopy${NO_COLOR}"
   echo "Downloads ABAP SDK files outside the scope of an LW installation and copies all co- and data files to /usr/sap/trans"
   echo ""
-	exit 1
 }
 
 
@@ -308,17 +327,17 @@ function print_usage()
 
 RUNMODE=""
 OPERATION=""
-SAP_SID=""
-SAP_CI_HOSTNAME=""
-SAP_CI_INSTANCE_NR=""
-SAP_IMPORT_CLIENT=""
-CUSTOM_TRANSPORT_PFL=""
-SAP_TRANSPORT_PROFILE=""
+SAP_SID=""                # provided by bootstrap in lwpostscript mode
+SAP_CI_HOSTNAME=""        # provided by bootstrap in lwpostscript mode
+SAP_CI_INSTANCE_NR=""     # provided by bootstrap in lwpostscript mode
+SAP_IMPORT_CLIENT=""      # defaults to 000 if not provided in standalone mode, hardcoded for lwpostscript
+CUSTOM_TRANSPORT_PFL=""   # defaults to /usr/sap/trans/bin/TP_DOMAIN_<SID>.PFL if not provided
 
 # no arguments = fail
 if [[ "$#" -eq 0 ]]
 then
   print_usage
+  exit 1;
 fi
 
 # ----- RUNMODE: LW POST-SCRIPT
@@ -329,7 +348,7 @@ then
 
   if [[ "$#" -lt 2 || "$#" -gt 3 ]]
   then
-     echo "Error: Wrong number of parameters for chosen runmode" $1; 
+     echo "Error: Wrong number of parameters for chosen runmode $1"; 
      print_usage
      exit 1
   fi
@@ -337,21 +356,21 @@ then
   while (("$#"))
   do
     case $2 in
-      "downloadandcopy") OPERATION="downloadandcopy"; shift;;
-      "addtobuffer") OPERATION="addtobuffer"; shift;;
-      "import") OPERATION="import"; shift;;
-      "pf=*") CUSTOM_TRANSPORT_PFL="${2#*=}"; shift;;
+      downloadandcopy) OPERATION="downloadandcopy"; shift;;
+      addtobuffer) OPERATION="addtobuffer"; shift;;
+      importcore) OPERATION="importcore"; shift;;
+      pf=*) CUSTOM_TRANSPORT_PFL="${2#*=}"; shift;;
       *) shift;;
     esac
   done 
 
+
   # Populate variables from LW environment
   source "$DIR/../utils/lw_bootstrap.sh"
 
-  SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
   SAP_IMPORT_CLIENT="000"
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
-  MEDIA_PATH="/media/LaunchWizard-"$LW_DEPLOYMENT_NAME"/abapsdk"; 
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
+  MEDIA_PATH="/media/LaunchWizard-$LW_DEPLOYMENT_NAME/abapsdk"; 
   
 
   if [[ $SAP_PRODUCT_ID = "sapNetweaverJavaOnly-750" || $SAP_PRODUCT_ID = "sapNetweaverJavaOnly-750-ase" ]]
@@ -368,7 +387,7 @@ then
   
   if [[ "$#" -lt 5 || "$#" -gt 6 ]]
   then
-     echo "Error: Wrong number of parameters for chosen runmode" $1; 
+     echo "Error: Wrong number of parameters for chosen runmode $1"; 
      print_usage
      exit 1;
   fi
@@ -376,16 +395,17 @@ then
   while (("$#"))
   do
     case $2 in
-      "downloadandcopy") OPERATION="downloadandcopy"; shift;;
-      "addtobuffer") OPERATION="addtobuffer"; shift;;
-      "import") OPERATION="import"; shift;;
-      "sapsid=*") SAP_SID="${2#*=}"; shift;;
-      "instancenr=*") SAP_CI_INSTANCE_NR="${2#*=}"; shift;;
-      "client=*") SAP_IMPORT_CLIENT="${2#*=}"; shift;;
-      "pf=*") CUSTOM_TRANSPORT_PFL="${2#*=}"; shift;;
+      downloadandcopy) OPERATION="downloadandcopy"; shift;;
+      addtobuffer) OPERATION="addtobuffer"; shift;;
+      importcore) OPERATION="importcore"; shift;;
+      sapsid=*) SAP_SID="${2#*=}"; shift;;
+      instancenr=*) SAP_CI_INSTANCE_NR="${2#*=}"; shift;;
+      client=*) SAP_IMPORT_CLIENT="${2#*=}"; shift;;
+      pf=*) CUSTOM_TRANSPORT_PFL="${2#*=}"; shift;;
       *) shift;;
     esac
   done
+
 
   if [[ $SAP_SID = "" || $SAP_CI_INSTANCE_NR = "" ]]
   then
@@ -393,14 +413,13 @@ then
     exit 1;
   fi
 
-  SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
   SAP_IMPORT_CLIENT="000"
-  SAP_SIDADM=`echo $SAP_SID"adm" | awk '{print tolower($0)}'`
-  SAP_CI_HOSTNAME=`hostname`
-  MEDIA_PATH="$home/mymedia/abapsdk";
+  SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
+  SAP_CI_HOSTNAME=$(hostname)
+  MEDIA_PATH="/tmp/mymedia/abapsdk";
 
-  mkdir -p $MEDIA_PATH;
-  echo "Media path: " $MEDIA_PATH;
+  mkdir -p "$MEDIA_PATH";
+  echo "Media path: $MEDIA_PATH";
   echo ""
 
 else
@@ -408,7 +427,6 @@ else
   echo "Error: Unsupported runmode $1"; 
   print_usage
   exit 1;
-
 fi
 
 
@@ -429,40 +447,43 @@ echo "SAP_CI_HOSTNAME: $SAP_CI_HOSTNAME";
 echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
 
 
-mkdir -p $MEDIA_PATH;
-echo "Media path: " $MEDIA_PATH;
+mkdir -p "$MEDIA_PATH";
+echo "Media path: $MEDIA_PATH";
 echo ""
 
 
 # do we need to generate a transport profile?
 if [[ "$CUSTOM_TRANSPORT_PFL" = "" ]]
 then
-  generate_transport_profile $MEDIA_PATH $SAP_SID
-  SAP_TRANSPORT_PROFILE="TP_DOMAIN_"$SAP_SID".PFL"
+  generate_transport_profile "$MEDIA_PATH" "$SAP_SID"
+  SAP_TRANSPORT_PROFILE="TP_DOMAIN_$SAP_SID.PFL"
+  SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
 else
-  $SAP_TRANSPORT_PROFILE=$CUSTOM_TRANSPORT_PFL
+  SAP_TRANSPORT_PROFILE="$(basename $CUSTOM_TRANSPORT_PFL)"
+  SAP_TRANSPORT_DIRECTORY="$(cat $CUSTOM_TRANSPORT_PFL 2>&1 | grep "TRANSDIR" | awk '{print $3}')"
 fi
 
 
 if [[ "$OPERATION" = "downloadandcopy" ]]
 then
-  download $MEDIA_PATH $ABAPSDK_URL $ABAPSDK_SIG_URL $ABAPSDK_SIGNING_KEY
-  copy_transport_files $MEDIA_PATH $SAP_SID $SAP_TRANSPORT_DIRECTORY
+  download "$MEDIA_PATH" "$ABAPSDK_URL" "$ABAPSDK_SIG_URL" "$ABAPSDK_SIGNING_KEY"
+  copy_transport_files "$MEDIA_PATH" "$SAP_SID" "$SAP_TRANSPORT_DIRECTORY"
   exit 0
 elif [[ "$OPERATION" = "addtobuffer" ]]
 then
-  download $MEDIA_PATH $ABAPSDK_URL $ABAPSDK_SIG_URL $ABAPSDK_SIGNING_KEY
-  copy_transport_files $MEDIA_PATH $SAP_SID $SAP_TRANSPORT_DIRECTORY
-  addtobuffer $MEDIA_PATH $SAP_SID $SAP_TRANSPORT_DIRECTORY $SAP_TRANSPORT_PROFILE
+  download "$MEDIA_PATH" "$ABAPSDK_URL" "$ABAPSDK_SIG_URL" "$ABAPSDK_SIGNING_KEY"
+  copy_transport_files "$MEDIA_PATH" "$SAP_SID" "$SAP_TRANSPORT_DIRECTORY"
+  addtobuffer "$MEDIA_PATH" "$SAP_SID" "$SAP_TRANSPORT_DIRECTORY" "$SAP_TRANSPORT_PROFILE"
   exit 0
-elif [[ "$OPERATION" = "import" ]]
+elif [[ "$OPERATION" = "importcore" ]]
 then
-  download $MEDIA_PATH $ABAPSDK_URL $ABAPSDK_SIG_URL $ABAPSDK_SIGNING_KEY
-  copy_transport_files $MEDIA_PATH $SAP_SID $SAP_TRANSPORT_DIRECTORY
-  addtobuffer $MEDIA_PATH $SAP_SID $SAP_TRANSPORT_DIRECTORY $SAP_TRANSPORT_PROFILE
-  importcore $MEDIA_PATH $SAP_SID $SAP_IMPORT_CLIENT $SAP_TRANSPORT_DIRECTORY $SAP_TRANSPORT_PROFILE
+  download "$MEDIA_PATH" "$ABAPSDK_URL" "$ABAPSDK_SIG_URL" "$ABAPSDK_SIGNING_KEY"å
+  copy_transport_files "$MEDIA_PATH" "$SAP_SID" "$SAP_TRANSPORT_DIRECTORY"
+  addtobuffer "$MEDIA_PATH" "$SAP_SID" "$SAP_TRANSPORT_DIRECTORY" "$SAP_TRANSPORT_PROFILE"
+  importcore "$MEDIA_PATH" "$SAP_SID" "$SAP_IMPORT_CLIENT" "$SAP_TRANSPORT_DIRECTORY" "$SAP_TRANSPORT_PROFILE"
   exit 0
 else
   echo "Error: Unsupported operation $OPERATION";
+  print_usage
   exit 1
 fi
