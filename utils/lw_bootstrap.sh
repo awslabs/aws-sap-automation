@@ -21,7 +21,16 @@ echo ""
 echo -n "Fetch CloudFormation Stack config"
 echo ""
 
-EC2_INSTANCE_ID="`wget -q -O - http://169.254.169.254/latest/meta-data/instance-id`"
+#Determine IMDSv1 or IMDSv2
+METADATA_RESPONSE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://169.254.169.254/latest/meta-data/)
+HEADER=""
+if [ $METADATA_RESPONSE -ne 200 ]; then
+echo -n "Use IMDSv2!"
+TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+HEADER="X-aws-ec2-metadata-token: $TOKEN"
+fi
+
+EC2_INSTANCE_ID=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/instance-id)
 if [ $? -ne 0 ]; then
 echo -e "${RED}Error:${NO_COLOR} Could not determine EC2 Instance ID"
 exit 1;
@@ -33,16 +42,15 @@ StackNotificationARNs=$(aws cloudformation describe-stacks --stack-name $StackNa
 StackId=$(aws cloudformation describe-stacks --stack-name $StackName --query "Stacks[0].StackId")
 StackId=$(sed -e 's/^"//' -e 's/"$//' <<<"$StackId")
 
-
 echo -e " ${GREEN}...done!${NO_COLOR}"
 
 echo -n "Fetch network config"
 
-interface=$(curl --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
-VPC_ID=$(curl --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/vpc-id)
-SUBNET_ID=$(curl --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/subnet-id)
-mac=$(curl --silent http://169.254.169.254/latest/meta-data/mac)
-SECURITYGROUP=$(curl --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
+interface=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+VPC_ID=$(curl --header $HEADER--silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/vpc-id)
+SUBNET_ID=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/subnet-id)
+mac=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/mac)
+SECURITYGROUP=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
 CURRENT_HOSTNAME=$(hostname)
 
 echo -e " ${GREEN}...done!${NO_COLOR}"
