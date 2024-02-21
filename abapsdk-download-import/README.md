@@ -39,7 +39,7 @@ mainSteps:
   name: 'RunTagging'
   inputs:
     runCommand:
-    - aws s3 cp s3://aws-sap-automation/abapsdk-download-install/run.sh ./ --region eu-central-1
+    - aws s3 cp s3://aws-sap-automation/abapsdk-download-import/run.sh ./ --region eu-central-1
     - chmod +x run.sh
     - ./run.sh
 ```

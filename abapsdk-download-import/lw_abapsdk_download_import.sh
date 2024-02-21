@@ -143,7 +143,7 @@ function generate_transport_profile()
   sudo -i -u "$SAP_SIDADM" echo "
 #TMS:0001:DOMAIN_$SAP_SID\n
 #\n
-#Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
+#Created by lw_abapsdk_download_import.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
 #\n
 #\n
 TRANSDIR            = $SAP_TRANSPORT_DIRECTORY\n
@@ -164,7 +164,7 @@ $SAP_SID/TP_VERSION      = 380\n
   #echo -n "Generating temporary transport domain " $SAP_DOMAIN_CFG;
   #
   #sudo -i -u $SAP_SIDADM echo "
-#Created by lw_abapsdk_download_install.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
+#Created by lw_abapsdk_download_import.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
 #$SAP_CI_HOSTNAME\n
 #$SAP_CI_INSTANCE_NR\n
 #\n
@@ -375,7 +375,7 @@ then
 
   if [[ $SAP_PRODUCT_ID = "sapNetweaverJavaOnly-750" || $SAP_PRODUCT_ID = "sapNetweaverJavaOnly-750-ase" ]]
   then 
-    echo -e "${RED}Error:${NO_COLOR} ABAP SDK cannot be installed on Java stacks!"
+    echo -e "${RED}Error:${NO_COLOR} ABAP SDK cannot be imported to Java stacks!"
     exit 1
   fi
 
@@ -436,7 +436,7 @@ fi
 
 echo ""
 echo "-------------------------------------------------------"
-echo "LW AWS SDK for SAP ABAP Download & Installation Script"
+echo "LW AWS SDK for SAP ABAP Download & Import Script"
 echo "-------------------------------------------------------"
 echo "RUNMODE: $RUNMODE"
 echo ""
