@@ -30,7 +30,7 @@ TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metad
 HEADER="X-aws-ec2-metadata-token: $TOKEN"
 fi
 
-EC2_INSTANCE_ID=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/instance-id)
+EC2_INSTANCE_ID=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/instance-id)
 if [ $? -ne 0 ]; then
 echo -e "${RED}Error:${NO_COLOR} Could not determine EC2 Instance ID"
 exit 1;
@@ -46,11 +46,11 @@ echo -e " ${GREEN}...done!${NO_COLOR}"
 
 echo -n "Fetch network config"
 
-interface=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
-VPC_ID=$(curl --header $HEADER--silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/vpc-id)
-SUBNET_ID=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/subnet-id)
-mac=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/mac)
-SECURITYGROUP=$(curl --header $HEADER --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
+interface=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/)
+VPC_ID=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/vpc-id)
+SUBNET_ID=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${interface}/subnet-id)
+mac=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/mac)
+SECURITYGROUP=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
 CURRENT_HOSTNAME=$(hostname)
 
 echo -e " ${GREEN}...done!${NO_COLOR}"
