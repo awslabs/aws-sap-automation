@@ -19,4 +19,4 @@ chmod +x utils/colors.sh
 chmod +x utils/lw_bootstrap.sh
 chmod +x software_download/lw_abapsdk_download_install.sh
 cd abapsdk-download-install
-./lw_abapsdk_download_install.sh lwpostscript import
+./lw_abapsdk_download_install.sh lwpostscript importcore
