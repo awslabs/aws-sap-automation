@@ -266,7 +266,7 @@ function importcore()
   if [[ $TP_RC -ne 0 && $TP_RC -ne 4  ]]
   then 
     echo -e " ${RED}...failed!${NO_COLOR} (TP return code: ${TP_RC})"
-    echo "Error: Failure during download of ABAP SDK signature!"
+    echo "Error: Failure during import of ABAP SDK core transport!"
     exit 1
   else
     echo -e " ${GREEN}...success!${NO_COLOR} (TP return code: ${TP_RC})"
