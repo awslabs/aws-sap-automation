@@ -96,7 +96,7 @@ function download()
 
 
 
-  if ! openssl dgst -sha256 -verify abapsdk-signing-key.pem -keyform PEM -signature abapsdk-LATEST.sig abapsdk-LATEST.zip
+  if ! openssl dgst -sha256 -verify $MEDIA_PATH/abapsdk-signing-key.pem -keyform PEM -signature $MEDIA_PATH/abapsdk-LATEST.sig $MEDIA_PATH/abapsdk-LATEST.zip
   then 
     echo -e " ${RED}...failed!${NO_COLOR}"
     echo "Error: Failure during verification of ABAP SDK signature with signing key!"
@@ -109,7 +109,7 @@ function download()
   echo -n "Unzipping contents of $(basename $ABAPSDK_URL) to $MEDIA_PATH";
 
 
-  if ! unzip -o -q abapsdk-LATEST.zip -d "$MEDIA_PATH"
+  if ! unzip -o -q $MEDIA_PATH/abapsdk-LATEST.zip -d "$MEDIA_PATH"
   then 
     echo -e " ${RED}...failed!${NO_COLOR}"
     exit 1
@@ -128,8 +128,6 @@ function generate_transport_profile()
 {
   MEDIA_PATH=$1
   SAP_SID=$2
-  #SAP_CI_HOSTNAME=$3
-  #SAP_CI_INSTANCE_NR=$4
   SAP_TRANSPORT_DIRECTORY="/usr/sap/trans"
   SAP_TRANSPORT_PROFILE="TP_DOMAIN_$SAP_SID.PFL"
   SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
@@ -140,8 +138,7 @@ function generate_transport_profile()
   # SAP Help Portal - SAP NetWeaver 7.4.15 - Change and Transport System - Transport Profile 
   # https://help.sap.com/docs/SAP_NETWEAVER_740/4a368c163b08418890a406d413933ba7/3dad5b9b4ebc11d182bf0000e829fbfe.html?version=7.4.15&q=software
 
-  sudo -i -u "$SAP_SIDADM" echo "
-#TMS:0001:DOMAIN_$SAP_SID\n
+  sudo -i -u "$SAP_SIDADM" echo "#TMS:0001:DOMAIN_$SAP_SID\n
 #\n
 #Created by lw_abapsdk_download_import.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
 #\n
@@ -153,33 +150,12 @@ AWS/NBUFFORM        = 1\n
 AWS/TP_VERSION      = 380\n
 #\n
 $SAP_SID/ABAPNTFMODE     = b\n
-$SAP_SID/MT_MODE         = AUTO\n
 $SAP_SID/NBUFFORM        = 1\n
 $SAP_SID/TP_VERSION      = 380\n
 " | sudo -i -u "$SAP_SIDADM" tee "$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE"
 
   echo -e " ${GREEN}...done!${NO_COLOR}"
   echo ""
-  ########
-  #echo -n "Generating temporary transport domain " $SAP_DOMAIN_CFG;
-  #
-  #sudo -i -u $SAP_SIDADM echo "
-#Created by lw_abapsdk_download_import.sh Post-Script for AWS Launch Wizard for SAP, replace with STMS-generated one at your convenience\n
-#$SAP_CI_HOSTNAME\n
-#$SAP_CI_INSTANCE_NR\n
-#\n
-#DOMAIN_$SAP_SID\n
-#Transport domain $SAP_SID\n
-#$SAP_SID\n
-#System $SAP_SID\n
-#$SAP_SID\n
-#System $SAP_SID\n
-#GROUP_$SAP_SID\n
-#Transport group $SAP_SID\n
-#" | sudo -i -u "$SAP_SIDADM" tee $SAP_TRANSPORT_DIRECTORY/bin/$SAP_DOMAIN_CFG
-  #
-  #echo -e " ${GREEN}...done!${NO_COLOR}"
-  #########
 }
 
 
@@ -284,9 +260,18 @@ function importcore()
   CORE_TRANSPORT_ID="AWS$(basename -s .AWS $MEDIA_PATH/transports/core/K*)"
   
   # https://help.sap.com/doc/saphelp_nw73ehp1/7.31.19/en-us/3d/ad5b814ebc11d182bf0000e829fbfe/content.htm?no_cache=true
-  # tp seems to return 0 even if there were warnings :-(
   echo -e "${YELLOW}Importing AWS SDK for SAP ABAP core transports into $SAP_SID with client $SAP_IMPORT_CLIENT ${NO_COLOR}";
-  sudo -i -u "$SAP_SIDADM" tp import "$CORE_TRANSPORT_ID" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE" client="$SAP_IMPORT_CLIENT" U41
+  TP_RC=$(sudo -i -u "$SAP_SIDADM" tp import "$CORE_TRANSPORT_ID" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE" client="$SAP_IMPORT_CLIENT" U41)
+
+  if [[ $TP_RC -ne 0 && $TP_RC -ne 4  ]]
+  then 
+    echo -e " ${RED}...failed!${NO_COLOR} (TP return code: ${TP_RC})"
+    echo "Error: Failure during download of ABAP SDK signature!"
+    exit 1
+  else
+    echo -e " ${GREEN}...success!${NO_COLOR} (TP return code: ${TP_RC})"
+  fi
+
   echo ""
 }
 
@@ -297,12 +282,12 @@ function print_usage()
 	echo "Usage:"
   echo ""
   echo -e "${YELLOW}Postscript mode:${NO_COLOR} $0 lwpostscript { downloadandcopy | addtobuffer | importcore } [ pf=</path/to/custom/transport.pfl> ]"
-  echo -e "${YELLOW}Standalone mode:${NO_COLOR} $0 standalone { downloadandcopy | addtobuffer | importcore } sapsid=<###> instancenr=<##> [ client=<###> ] [ pf=/path/to/custom/transport.pfl ]"
+  echo -e "${YELLOW}Standalone mode:${NO_COLOR} $0 standalone { downloadandcopy | addtobuffer | importcore } sapsid=<###> [ client=<###> ] [ pf=/path/to/custom/transport.pfl ]"
   echo ""
   echo -e "${YELLOW}Example: $0 lwpostscript addtobuffer${NO_COLOR}"
   echo "Downloads ABAP SDK files during LW post-script execution and adds the core transport to the SAP system's buffer with a generated transport profile."
   echo ""
-  echo -e "${YELLOW}Example: $0 standalone importcore sapsid=S4H instancenr=00 client=100 pf=/usr/sap/trans/bin/TP_DOMAIN_DDD.PFL${NO_COLOR}"
+  echo -e "${YELLOW}Example: $0 standalone importcore sapsid=S4H client=100 pf=/usr/sap/trans/bin/TP_DOMAIN_DDD.PFL${NO_COLOR}"
   echo "Downloads ABAP SDK files outside the scope of an LW installation and imports the core transport into a running SAP system, using the provided transport profile and client 100."
   echo ""
   echo -e "${YELLOW}Example: $0 lwpostscript importcore pf=/usr/sap/trans/bin/TP_DOMAIN_AWD.PFL${NO_COLOR}"
@@ -328,8 +313,6 @@ function print_usage()
 RUNMODE=""
 OPERATION=""
 SAP_SID=""                # provided by bootstrap in lwpostscript mode
-SAP_CI_HOSTNAME=""        # provided by bootstrap in lwpostscript mode
-SAP_CI_INSTANCE_NR=""     # provided by bootstrap in lwpostscript mode
 SAP_IMPORT_CLIENT=""      # defaults to 000 if not provided in standalone mode, hardcoded for lwpostscript
 CUSTOM_TRANSPORT_PFL=""   # defaults to /usr/sap/trans/bin/TP_DOMAIN_<SID>.PFL if not provided
 
@@ -399,7 +382,6 @@ then
       addtobuffer) OPERATION="addtobuffer"; shift;;
       importcore) OPERATION="importcore"; shift;;
       sapsid=*) SAP_SID="${2#*=}"; shift;;
-      instancenr=*) SAP_CI_INSTANCE_NR="${2#*=}"; shift;;
       client=*) SAP_IMPORT_CLIENT="${2#*=}"; shift;;
       pf=*) CUSTOM_TRANSPORT_PFL="${2#*=}"; shift;;
       *) shift;;
@@ -407,16 +389,15 @@ then
   done
 
 
-  if [[ $SAP_SID = "" || $SAP_CI_INSTANCE_NR = "" ]]
+  if [[ $SAP_SID = "" ]]
   then
-    echo "Error: Missing mandatory parameter(s) for runmode standalone -> SAP SID and instance number";
+    echo "Error: Missing mandatory parameter(s) for runmode standalone -> SAP SID";
     exit 1;
   fi
 
   SAP_IMPORT_CLIENT="000"
   SAP_SIDADM=$(echo "$SAP_SID"adm | awk '{print tolower($0)}')
-  SAP_CI_HOSTNAME=$(hostname)
-  MEDIA_PATH="/tmp/mymedia/abapsdk";
+  MEDIA_PATH="/tmp/awssapabapsdk";
 
   mkdir -p "$MEDIA_PATH";
   echo "Media path: $MEDIA_PATH";
@@ -442,8 +423,6 @@ echo "RUNMODE: $RUNMODE"
 echo ""
 
 echo "SAP_SID: $SAP_SID";
-echo "SAP_CI_INSTANCE_NR: $SAP_CI_INSTANCE_NR";
-echo "SAP_CI_HOSTNAME: $SAP_CI_HOSTNAME";
 echo "SAP_PRODUCT_ID: $SAP_PRODUCT_ID";
 
 
@@ -453,7 +432,7 @@ echo ""
 
 
 # do we need to generate a transport profile?
-if [[ "$CUSTOM_TRANSPORT_PFL" = "" ]]
+if [[ "$CUSTOM_TRANSPORT_PFL" = "" && ( $OPERATION = "addtobuffer" || $OPERATION = "importcore" ) ]]
 then
   generate_transport_profile "$MEDIA_PATH" "$SAP_SID"
   SAP_TRANSPORT_PROFILE="TP_DOMAIN_$SAP_SID.PFL"
