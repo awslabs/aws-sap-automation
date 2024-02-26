@@ -7,10 +7,10 @@ Adds a set of predefined custom tags to all AWS Launch Wizard for SAP deployment
 - Navigate to AWS Systems Manager -> Parameter Store: [Create](https://console.aws.amazon.com/systems-manager/parameters/aws/create) a new parameter called **sap-custom-tags**, Type **StringList**, Value must be key=value pairs one line each ([Example](customtags.txt))
 - Create and attach the provided [IAM Policy](iam_policy.json) to role **AmazonEC2RoleForLaunchWizard**
 
-## New LW4SAP deployments:
+## New LW4SAP deployments
 
 In AWS Launch Wizard for SAP, proceed to **Configure deployment model**. 
-In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location.:
+In section **Post-deployment configuration script**, choose the following Amazon S3 URL as script location:
 
 ```bash
 s3://aws-sap-automation/tagging/run.sh
@@ -24,7 +24,7 @@ The result looks as follows, the error message "Invalid S3 Bucket" can be ignore
 
 Click 'next' to complete the wizard.
 
-## Existing LW4SAP deployments:
+## Existing LW4SAP deployments
 
 Navigate to AWS Systems Manager → Documents and hit **Create document**. Choose a name and copy and paste the following Content
 
