@@ -1,9 +1,12 @@
 # AWS SDK for SAP ABAP installer
 
-Downloads, unpacks and copies the AWS SDK for SAP ABAP's transport files to their designated location for further processing.
-The script is further able to add all transport files to the SAP system's transport buffer and import the ABAP SDK's core
-transport. Additional transports can be imported as needed. For brand new installations, the script can generate a minimal 
-transport profile, so that all transports are readily available after setting up transaction STMS. 
+Performs the following steps:
+1. Downloads, validates, unpacks and copies the AWS SDK for SAP ABAP's transport files to their designated location for further processing (mode=downloadandcopy)
+2. (Optional) Adds all transport files to the SAP system's transport buffer (mode=addtobuffer)
+3. (Optional) Imports the ABAP SDK's **core** transport (mode=importcore)
+
+Additional transports can be imported manually as needed. For brand new installations, the script generates a minimal 
+transport profile, so that all transports are readily available after setting up SAP transaction STMS. 
 
 ## Prerequisites (Once only)
 
