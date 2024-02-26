@@ -261,7 +261,8 @@ function importcore()
   
   # https://help.sap.com/doc/saphelp_nw73ehp1/7.31.19/en-us/3d/ad5b814ebc11d182bf0000e829fbfe/content.htm?no_cache=true
   echo -e "${YELLOW}Importing AWS SDK for SAP ABAP core transports into $SAP_SID with client $SAP_IMPORT_CLIENT ${NO_COLOR}";
-  TP_RC=$(sudo -i -u "$SAP_SIDADM" tp import "$CORE_TRANSPORT_ID" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE" client="$SAP_IMPORT_CLIENT" U41)
+  sudo -i -u "$SAP_SIDADM" tp import "$CORE_TRANSPORT_ID" "$SAP_SID" pf="$SAP_TRANSPORT_DIRECTORY/bin/$SAP_TRANSPORT_PROFILE" client="$SAP_IMPORT_CLIENT" U41
+  TP_RC=$?
 
   if [[ $TP_RC -ne 0 && $TP_RC -ne 4  ]]
   then 

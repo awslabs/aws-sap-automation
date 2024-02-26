@@ -71,7 +71,7 @@ sapsid, client, pf are optional parameters!
 Example:
 
 ```bash
-./lw_abapsdk.sh standalone downloadandcopy apsid=S4H
+./lw_abapsdk.sh standalone downloadandcopy sapsid=S4H
 ```
 
 ## Troubleshooting
