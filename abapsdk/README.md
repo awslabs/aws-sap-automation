@@ -66,7 +66,7 @@ To run the script standalone, simply execute the following command:
 ./lw_abapsdk.sh standalone { downloadandcopy | addtobuffer | importcore } sapsid=<###> client=<###> pf=/path/to/custom/transport.pfl
 ```
 
-sapsid, client, pf are optional parameters!
+'client' and 'pf' are optional parameters!
 
 Example:
 
