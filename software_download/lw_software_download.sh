@@ -38,6 +38,7 @@ then
    SAP_EXPORT_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/EXPORT"
    SAP_RDB_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/RDB"
    SAP_RDBCLIENT_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/RDBCLIENT"
+   SAP_WD_SOFTWARE_S3_BUCKET=${S3_BUCKET_PREFIX}"/WD"
 
    echo "SAP_SAPCAR_SOFTWARE_S3_BUCKET: "$SAP_SAPCAR_SOFTWARE_S3_BUCKET;
    echo "SAP_SWPM_SOFTWARE_S3_BUCKET: "$SAP_SWPM_SOFTWARE_S3_BUCKET;
@@ -45,6 +46,7 @@ then
    echo "SAP_EXPORT_SOFTWARE_S3_BUCKET: "$SAP_EXPORT_SOFTWARE_S3_BUCKET;
    echo "SAP_RDB_SOFTWARE_S3_BUCKET: "$SAP_RDB_SOFTWARE_S3_BUCKET;
    echo "SAP_RDBCLIENT_SOFTWARE_S3_BUCKET: "$SAP_RDBCLIENT_SOFTWARE_S3_BUCKET;
+   echo "SAP_WD_SOFTWARE_S3_BUCKET: "$SAP_WD_SOFTWARE_S3_BUCKET;
 fi
 
 # --- Retrieving LW CloudFormation stack variables ---
@@ -282,11 +284,19 @@ then
   # Technical Foundation
   echo "SAP foundation download links"
   echo ""
-  for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB 
+  for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB WD
   do
+
+    if [[ $i == WD ]]
+    then
+    ITEM_VARIABLE=`echo "WEB_DISPATCHER"`;
+    ITEM_DESC_TMP=`echo "WEB_DISPATCHER_DESC"`;
+    else
     ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
-    SWDC_URL=`echo "${!ITEM_VARIABLE}"`;
     ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
+    fi
+
+    SWDC_URL=`echo "${!ITEM_VARIABLE}"`;
     ITEM_DESC=`echo "${!ITEM_DESC_TMP}"`;
 
     # not all stacks necessarily have all the same technical foundation parts (e.g. SAPJVM is only valid for sapsolman-7.2 and sapNetweaverJavaOnly-750)
@@ -341,15 +351,31 @@ echo "Preparing technical foundation for $SAP_PRODUCT_ID."
 echo "---------------------------------------------------"
 echo ""
 
-for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB
+for i in SAPCAR SWPM KERNEL_IGSEXE KERNEL_IGSHELPER KERNEL_SAPEXE KERNEL_SAPEXEDB KERNEL_SAPHOSTAGENT KERNEL_SAPJVM RDBCLIENT RDB WD
 do
  ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
  ITEM_VARIABLE_MD5=`echo "$PRODUCT_PREFIX"_"$i"_MD5`;
+
+ if [[ $i == WD ]]
+ then
+ ITEM_VARIABLE=`echo "WEB_DISPATCHER"`;
+ ITEM_VARIABLE_MD5=`echo "WEB_DISPATCHER_MD5`;
+ ITEM_DESC_TMP=`echo "WEB_DISPATCHER_DESC"`;
+ else
+ ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
+ ITEM_VARIABLE_MD5=`echo "$PRODUCT_PREFIX"_"$i"_MD5`;
+ ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
+ fi
+
+ if [[ $i == WD && $SAP_WD_SOFTWARE_S3_BUCKET == ""]]
+ then
+  echo "Skip Web Dispatcher!"
+  continue
+ fi
+
  SWDC_URL=`echo "${!ITEM_VARIABLE}"`
  SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`
- ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
  ITEM_DESC=`echo "${!ITEM_DESC_TMP}"`;
-
 
  if [[ $i == SAPCAR ]]
  then
@@ -371,6 +397,10 @@ do
  then
    ITEM_PATH=`echo "$MEDIA_PATH"/database_client`;
    ITEM_BUCKET=$SAP_RDBCLIENT_SOFTWARE_S3_BUCKET;
+ elif [[ $i = WD ]]
+ then
+   ITEM_PATH=`echo "$MEDIA_PATH"/wd`;
+   ITEM_BUCKET=$SAP_WD_SOFTWARE_S3_BUCKET;
  else
    ITEM_PATH=`echo "$MEDIA_PATH"/`;
  fi
@@ -482,7 +512,6 @@ do
  ITEM_VARIABLE_MD5=`echo "$PRODUCT_PREFIX"_EXPORT_PART"$j"_MD5`;
  SWDC_URL=`echo "${!ITEM_VARIABLE}"`
  SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`
-
 
  FILENAME=`wget -q -r -U "SAP Download Manager" --timeout=30 --server-response --spider --content-disposition --http-user=$S_USER --http-password=$S_PASS --auth-no-challenge $SWDC_URL 2>&1 | grep "Content-Disposition:" | tail -1 | awk -F"filename=" '{print $2}' | tr -d \"`
 

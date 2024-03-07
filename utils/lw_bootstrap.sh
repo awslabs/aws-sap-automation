@@ -81,6 +81,8 @@ SAP_KERNEL_SOFTWARE_S3_BUCKET=$(sed -n 's|.*"SAPINST_CD_KERNEL":"\([^"]*\)".*|\1
 SAP_EXPORT_SOFTWARE_S3_BUCKET=$(sed -n 's|.*"SAPINST_CD_LOAD":"\([^"]*\)".*|\1|p' parameters.json)
 SAP_RDB_SOFTWARE_S3_BUCKET=$(sed -n 's|.*"SAPINST_CD_RDBMS":"\([^"]*\)".*|\1|p' parameters.json)
 SAP_RDBCLIENT_SOFTWARE_S3_BUCKET=$(sed -n 's|.*"SAPINST_CD_RDBMS_CLIENT":"\([^"]*\)".*|\1|p' parameters.json)
+SAP_WD_SOFTWARE_S3_BUCKET=$(sed -n 's|.*"SAPINST_CD_WD":"\([^"]*\)".*|\1|p' parameters.json)
+
 
 if [ -z "$SAP_CI_HOSTNAME" ]
 then
