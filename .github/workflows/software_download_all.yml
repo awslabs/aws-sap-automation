@@ -54,8 +54,10 @@ jobs:
           ./software_download/lw_software_download.sh validate saps4hana-2020
           ./software_download/lw_software_download.sh validate saps4hana-2021
           ./software_download/lw_software_download.sh validate saps4hana-2022
+          ./software_download/lw_software_download.sh validate saps4hana-2023
           ./software_download/lw_software_download.sh validate saps4hanafoundations-2021
           ./software_download/lw_software_download.sh validate saps4hanafoundations-2022
+          ./software_download/lw_software_download.sh validate saps4hanafoundations-2023
           ./software_download/lw_software_download.sh validate sapsolman-7.2
           
       # Runs a set of commands using the runners shell
