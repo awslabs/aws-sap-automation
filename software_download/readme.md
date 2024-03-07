@@ -59,8 +59,10 @@ Supported **SAP_PRODUCT_ID**s, as per AWS Launch Wizard for SAP, are
 - saps4hana-2020
 - saps4hana-2021
 - saps4hana-2022
+- saps4hana-2023
 - saps4hanafoundations-2021
 - saps4hanafoundations-2022
+- saps4hanafoundations-2023
 - sapsolman-7.2 (HANA|ASE)
 
 All done!

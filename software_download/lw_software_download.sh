@@ -211,6 +211,11 @@ case $SAP_PRODUCT_ID in
      EXPORTS=30
   ;;
 
+  "saps4hana-2023")
+     PRODUCT_PREFIX="S4HANA23"
+     EXPORTS=30
+  ;;
+
   "saps4hanafoundations-2021")
      PRODUCT_PREFIX="S4HANA21_FOUNDATIONS"
      EXPORTS=8
@@ -218,6 +223,11 @@ case $SAP_PRODUCT_ID in
 
   "saps4hanafoundations-2022")
      PRODUCT_PREFIX="S4HANA22_FOUNDATIONS"
+     EXPORTS=9
+  ;;
+
+  "saps4hanafoundations-2023")
+     PRODUCT_PREFIX="S4HANA23_FOUNDATIONS"
      EXPORTS=9
   ;;
 
@@ -243,8 +253,10 @@ case $SAP_PRODUCT_ID in
      echo "-> saps4hana-2020"
      echo "-> saps4hana-2021"
      echo "-> saps4hana-2022"
+     echo "-> saps4hana-2023"
      echo "-> saps4hanafoundations-2021"
      echo "-> saps4hanafoundations-2022"
+     echo "-> saps4hanafoundations-2023"
      echo "-> sapsolman-7.2"
      echo ""
      echo "Exiting!";
