@@ -367,9 +367,9 @@ do
  ITEM_DESC_TMP=`echo "$PRODUCT_PREFIX"_"$i"_"DESC"`;
  fi
 
- if [[ $i == WD && $SAP_WD_SOFTWARE_S3_BUCKET == ""]]
+ if [[ $i == WD && $SAP_WD_SOFTWARE_S3_BUCKET == "" ]]
  then
-  echo "Skip Web Dispatcher!"
+  echo "Skip SAP Web Dispatcher Download!"
   continue
  fi
 
