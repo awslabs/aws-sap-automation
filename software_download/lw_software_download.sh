@@ -359,7 +359,7 @@ do
  if [[ $i == WD ]]
  then
  ITEM_VARIABLE=`echo "WEB_DISPATCHER"`;
- ITEM_VARIABLE_MD5=`echo "WEB_DISPATCHER_MD5`;
+ ITEM_VARIABLE_MD5=`echo "WEB_DISPATCHER_MD5"`;
  ITEM_DESC_TMP=`echo "WEB_DISPATCHER_DESC"`;
  else
  ITEM_VARIABLE=`echo "$PRODUCT_PREFIX"_"$i"`;
@@ -373,8 +373,8 @@ do
   continue
  fi
 
- SWDC_URL=`echo "${!ITEM_VARIABLE}"`
- SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`
+ SWDC_URL=`echo "${!ITEM_VARIABLE}"`;
+ SWDC_MD5=`echo "${!ITEM_VARIABLE_MD5}"`;
  ITEM_DESC=`echo "${!ITEM_DESC_TMP}"`;
 
  if [[ $i == SAPCAR ]]
