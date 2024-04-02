@@ -62,6 +62,19 @@ Wait until the command has completed successfully. In case the command failed, c
 
 To run the script standalone, simply execute the following command:
 
+Initialization
+```bash
+cd /tmp
+mkdir -p aws-sap-automation
+cd aws-sap-automation
+aws s3 cp s3://aws-sap-automation/abapsdk/ ./abapsdk --recursive --region eu-central-1
+aws s3 cp s3://aws-sap-automation/utils/ ./utils --recursive --region eu-central-1
+chmod +x utils/colors.sh
+chmod +x utils/lw_bootstrap.sh
+chmod +x abapsdk/lw_abapsdk.sh
+cd abapsdk
+```
+
 ```bash
 ./lw_abapsdk.sh standalone { downloadandcopy | addtobuffer | importcore } sapsid=<###> client=<###> pf=/path/to/custom/transport.pfl
 ```
@@ -71,7 +84,7 @@ To run the script standalone, simply execute the following command:
 Example:
 
 ```bash
-./lw_abapsdk.sh standalone downloadandcopy sapsid=S4H
+./lw_abapsdk.sh standalone importcore sapsid=S4H client=000 pf=/usr/sap/trans/bin/TP_DOMAIN_S4H.PFL
 ```
 
 ## Troubleshooting
