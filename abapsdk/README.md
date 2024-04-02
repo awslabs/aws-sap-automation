@@ -60,7 +60,7 @@ Wait until the command has completed successfully. In case the command failed, c
 
 ## Run standalone
 
-To run the script standalone, simply execute the following command:
+To run the script standalone, simply execute the following command locally:
 
 Initialization
 ```bash
