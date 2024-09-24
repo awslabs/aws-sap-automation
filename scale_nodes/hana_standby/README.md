@@ -10,9 +10,9 @@ The following assumptions should be considered before proceeding with this proce
 * There are no upgrades or patching in progress.
 * No maintenance activities, such as backups, are in progress.
 
-**Steps for adding SAP HANA worker**
+**Steps for adding SAP HANA standby**
 
-Navigate to **AWS Systems Manager** → Shared Resources → Documents and hit **Create document** of type **Automation**. Switch from Design to Code and copy the contents of this [file](hana_standby_add.yml) into the input area. Enter a name **aws-sap-automation-hana-standby-add**.
+Navigate to **AWS Systems Manager** → Shared Resources → Documents and hit **Create document** of type **Automation**. Switch from Design to Code and copy the contents of this [file](hana_standby_add.yml) into the input area. Enter a name **aws-sap-automation-hana-standby-add**
 
 ![ssm1](ssm1.jpg)
 

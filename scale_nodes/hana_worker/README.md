@@ -11,7 +11,7 @@ The following assumptions should be considered before proceeding with this proce
 
 **Steps for adding SAP HANA worker**
 
-Navigate to **AWS Systems Manager** → Shared Resources → Documents and hit **Create document** of type **Automation**. Switch from Design to Code and copy the contents of this [file](hana_worker_add_min.json) into the input area, make sure to select **json**. Enter a name **aws-sap-automation-hana-worker-add**.
+Navigate to **AWS Systems Manager** → Shared Resources → Documents and hit **Create document** of type **Automation**. Switch from Design to Code and copy the contents of this [file](hana_worker_add_min.json) into the input area, make sure to select **json**. Enter a name **aws-sap-automation-hana-worker-add**
 
 ![ssm1](ssm1.jpg)
 
