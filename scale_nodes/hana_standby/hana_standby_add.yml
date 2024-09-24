@@ -1,0 +1,1171 @@
+schemaVersion: '0.3'
+description: Add a HANA standby node
+parameters:
+  HanaPrimaryInstanceId:
+    allowedPattern: ^i-[a-z0-9]{17}$
+    default: i-abcdefg1234567890
+    description: (Required) Instance ID of the primary HANA node.
+    type: String
+  HanaDbStandbyHostname:
+    allowedPattern: ^[a-z0-9-]+$
+    default: standby03
+    description: (Required) Hostname of the new HANA standby node.
+    maxChars: 13
+    type: String
+  HanaDbPasswordSecretKey:
+    allowedPattern: ^[\w/_+=.@-]{0,512}$
+    default: LaunchWizard-ExampleSecret-GlobalPassword
+    description: (Required) Name of the secret used for storing the HANA password.
+    maxChars: 512
+    type: String
+  HanaDbAmiId:
+    allowedPattern: ^ami-([a-z0-9]{8}|[a-z0-9]{17})$
+    default: ami-00000000000000000
+    description: (Required) AMI to be used for the new DB node. Typically, this will be latest copy of existing DB worker node.
+    type: String
+  HanaDbSecurityGroup:
+    allowedPattern: ^(?:sg-[a-z0-9]{8}|sg-[a-z0-9]{17})?$
+    default: ''
+    description: (Optional) Security Group to be used for the new HANA node. If left blank, the security group will be inferred from parent deployment.
+    type: String
+  Ec2KeyPair:
+    allowedPattern: ^[\x00-\x7F]{0,255}$
+    default: ''
+    description: (Optional) Key pair to be used for the new HANA node. If left blank, the key pair will be inferred from parent deployment.
+    maxChars: 255
+    type: String
+  PrivateIp:
+    allowedPattern: (^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$|^$)
+    default: ''
+    description: (Optional) Private IP address to use. If left blank, a private IP address will be automatically assigned from the subnets available pool.
+    type: String
+  DisableDeploymentRollback:
+    allowedValues:
+      - 'True'
+      - 'False'
+    default: 'True'
+    description: Disable rollback on failure.
+    type: String
+  ScriptFailureBehavior:
+    allowedValues:
+      - CONTINUE
+      - ROLLBACK
+    default: ROLLBACK
+    description: Action to take if any issues are encountering during pre/post script setup.
+    type: String
+  PreDeploymentScript:
+    allowedPattern: ^(s3://[a-z0-9\-\.\/]+)?$
+    default: ''
+    description: '(Optional) Full s3 URI path of pre-deployment script. Example format: s3://example-bucket-name/script.sh'
+    type: String
+  PostDeploymentScript:
+    allowedPattern: ^(s3://[a-z0-9\-\.\/]+)?$
+    default: ''
+    description: '(Optional) Full s3 URI path of post-deployment script. Example format: s3://example-bucket-name/script.sh'
+    type: String
+mainSteps:
+  - name: GetParentDeploymentName
+    action: aws:runCommand
+    nextStep: GetDeploymentId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          parentDeploymentName=$(aws ec2 describe-instances --instance-ids {{ HanaPrimaryInstanceId }} --query 'Reservations[*].Instances[*].Tags[?Key==`aws:cloudformation:stack-name`].Value' --region {{global:REGION}} --output text)
+
+          if [ -z "$parentDeploymentName" ]; then
+            echo "Failed to get parent deployment ID."
+            exit 1
+          fi
+
+          echo -n $parentDeploymentName
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetDeploymentId
+    action: aws:runCommand
+    nextStep: GetDeploymentSpecifications
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+          appName="${parentDeploymentName#LaunchWizard-}"
+
+          # Initialize variables
+          deploymentList=()
+          next_token=""
+
+          # Loop through all pages
+          while true; do
+              # Call the AWS CLI command and store the output in a variable
+              if [ -z "$next_token" ]; then
+                  output=$(aws launch-wizard list-deployments --max-items 100 --page-size 100)
+              else
+                  output=$(aws launch-wizard list-deployments --max-items 100 --page-size 100 --starting-token "$next_token")
+              fi
+
+              # Extract the deployments list from the output
+              deployments=$(echo "$output" | jq -r '.deployments')
+
+              # Append the deployments to the list variable
+              deploymentList+=("$deployments")
+
+              # Check if there is a next token in the response
+              next_token=$(echo "$output" | jq -r '.NextToken')
+
+              # If there is no next token, exit the loop
+              if [ -z "$next_token" ] || [ "$next_token" == "null" ]; then
+                  break
+              fi
+          done
+
+          # Filter the list for the object with specified application name
+          applicationObject=$(echo "${deploymentList[@]}" | jq --arg appName "$appName" -r '.[] | select(.name == $appName)')
+
+          if [ -z "$applicationObject" ]; then
+              echo "No deployment with name ${appName} found."
+              exit 1
+          else
+              deploymentId=$(echo "$applicationObject" | jq -r '.id')
+          fi
+
+          if [ -z "$deploymentId" ]; then
+            echo "Failed to identify deployment ID for ${appName}."
+            exit 1
+          fi
+
+          echo -n $deploymentId
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetDeploymentSpecifications
+    action: aws:executeAwsApi
+    nextStep: CreateCfnStackName
+    isEnd: false
+    inputs:
+      Service: launch-wizard
+      Api: GetDeployment
+      deploymentId: '{{ GetDeploymentId.Output }}'
+    outputs:
+      - Name: deploymentName
+        Selector: $.deployment.name
+        Type: String
+      - Name: DatabaseSecurityGroupId
+        Selector: $.deployment.specifications.DatabaseSecurityGroupId
+        Type: String
+      - Name: KeyPairName
+        Selector: $.deployment.specifications.KeyPairName
+        Type: String
+  - name: CreateCfnStackName
+    action: aws:runCommand
+    nextStep: SetActionId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ## Set CFN stack name for execution
+          cfnStackName={{ GetParentDeploymentName.Output }}-{{ HanaDbStandbyHostname }}
+
+          echo -n $cfnStackName
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: SetActionId
+    action: aws:runCommand
+    nextStep: GetKeyPairName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          ## Set ActionId.
+          addActionIdPrefix='A'
+          generatedUuid=$(uuidgen)
+
+          # Ex. A-7e8ab1dc-39fe-4979-8243-2ad2bc507b3a
+          actionId=$addActionIdPrefix-$generatedUuid
+
+          echo -n $actionId
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetKeyPairName
+    action: aws:runCommand
+    nextStep: GetDbSecurityGroup
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ec2KeyPair={{ Ec2KeyPair }}
+
+          ## If EC2 Key Pair name was not provided, attempt to identify from deployment specifications
+          if [ ! -n "$ec2KeyPair" ]; then
+            ec2KeyPair={{ GetDeploymentSpecifications.KeyPairName }}
+          fi
+
+          echo -n $ec2KeyPair
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetDbSecurityGroup
+    action: aws:runCommand
+    nextStep: GetConfigurationScripts
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          hanaDbSecurityGroup={{ HanaDbSecurityGroup }}
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+
+          ## If DB Security Group ID was not provided, attempt to identify from deployment specifications
+          #if [ ! -n "$hanaDbSecurityGroup" ]; then
+          #  ## Check whether an existing SG was utilized or if a new one was created
+          #  if [ -v "{{ GetDeploymentSpecifications.DatabaseSecurityGroupId }}" ]; then
+          #    hanaDbSecurityGroup={{ GetDeploymentSpecifications.DatabaseSecurityGroupId }}
+          #  else
+          #    hanaDbSecurityGroup=$(aws cloudformation describe-stack-resources --stack-name ${parentDeploymentName} --logical-resource-id NewDBSecurityGroup --query 'StackResources[0].PhysicalResourceId' --region {{global:REGION}} --output text)
+          #  fi
+          #fi
+
+          # MT: If Security Group ID was not provided, attempt to identify from source instance
+          if [ ! -n "$hanaDbSecurityGroup" ]; then
+            #Determine IMDSv1 or IMDSv2
+            METADATA_RESPONSE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://169.254.169.254/latest/meta-data/)
+            HEADER=""
+            if [ $METADATA_RESPONSE -ne 200 ]; then
+            echo -n "Use IMDSv2!"
+            TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+            HEADER="X-aws-ec2-metadata-token: $TOKEN"
+            fi
+
+            mac=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/mac)
+            hanaDbSecurityGroup=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
+          fi
+
+          if [ -z "$hanaDbSecurityGroup" ]; then
+              echo "Unable to identify security group ID."
+              exit 1
+          fi
+
+          echo -n $hanaDbSecurityGroup | sed -e "s/ /,/g" 
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetConfigurationScripts
+    action: aws:runCommand
+    nextStep: DiscoverAndChecks
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ## Set initial variable values from automation inputs
+          preDeploymentScript={{ PreDeploymentScript }}
+          postDeploymentScript={{ PostDeploymentScript }}
+          scriptFailureBehavior={{ ScriptFailureBehavior }}
+
+          ## Set ConfigurationScripts based on input
+          configurationScripts='{
+            "preConfigurationScripts": {
+              "configurationScripts": [],
+              "onFailureBehaviour": "'$scriptFailureBehavior'",
+              "timeoutInMinutes": 0
+            },
+            "postConfigurationScripts": {
+              "configurationScripts": [],
+              "onFailureBehaviour": "'$scriptFailureBehavior'",
+              "timeoutInMinutes": 0
+            }
+          }'
+
+          ## Update configurationScripts if s3 URI was passed for pre-deployment scripts.
+          if [[ -n "$preDeploymentScript" ]]; then
+            configurationScripts=$(echo $configurationScripts | jq --arg key "sequence" '.preConfigurationScripts.configurationScripts[0][$key] = 0')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "s3URL" --arg value $preDeploymentScript '.preConfigurationScripts.configurationScripts[0][$key] = $value')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "nodeTypesToRunScriptFor" '.preConfigurationScripts.configurationScripts[0][$key] = ["DB"]')
+          fi
+
+          ## Update configurationScripts if s3 URI was passed for post-deployment scripts.
+          if [[ -n "$postDeploymentScript" ]]; then
+            configurationScripts=$(echo $configurationScripts | jq --arg key "sequence" '.postConfigurationScripts.configurationScripts[0][$key] = 0')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "s3URL" --arg value $postDeploymentScript '.postConfigurationScripts.configurationScripts[0][$key] = $value')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "nodeTypesToRunScriptFor" '.postConfigurationScripts.configurationScripts[0][$key] = ["DB"]')
+          fi
+
+          echo -n $configurationScripts
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: DiscoverAndChecks
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 600
+    nextStep: GetInstanceProfile
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # declare
+          checkDbSecurityGroup=true
+          PrivateIp={{ PrivateIp }}
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+          HanaDbStandbyHostname={{ HanaDbStandbyHostname }}
+          HanaDbSecurityGroup={{ GetDbSecurityGroup.Output }}
+
+          # Create temp working directory
+          mkdir -p /root/install/add-hana-standby/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-hana-standby/{{ SetActionId.Output }}
+
+          # check if hana install is set to true
+          is_hana_installed_in_parent=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='InstallHANA'].ParameterValue" --region {{global:REGION}} --output text)
+
+          if [[ ${is_hana_installed_in_parent} == "No" ]]; then
+            echo "Adding nodes is only possible if sap application is installed in the parent deployment...HANA Installed=....${is_hana_installed_in_parent}..."
+            exit 8
+          fi
+
+          # check if volume type is fsx 
+          is_fsx=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='VolumeTypeHanaData'].ParameterValue" --region {{global:REGION}} --output text)
+
+          if [[ ${is_fsx} != "fsx" ]]; then
+            echo "Adding standby nodes is only possible if volume type fsx is used for hana data and log volumes...VolumeTypeHanaData=....${is_fsx}..."
+            exit 8
+          fi
+
+          # derive from parent CFN stack
+          db_inst_num=$(aws cloudformation describe-stacks --stack-name  ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='SAPInstanceNum'].ParameterValue" --region {{global:REGION}} --output text)
+          db_master_hostname=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='HANAHostname'].ParameterValue" --region {{global:REGION}} --output text)
+
+          if [[ -f "/usr/sap/hostctrl/exe/sapcontrol" ]]; then
+              /usr/sap/hostctrl/exe/sapcontrol -nr ${db_inst_num} -host ${db_master_hostname} -function GetSystemInstanceList | egrep 'GREEN|GRAY' | cut -d, -f1,2,6,7 --output-delimiter=' ' >> ${WORKDIR}/SapcontrolSystemList.txt
+          else    
+              echo "/usr/sap/hostctrl/exe/sapcontrol not found...exiting"
+              exit 1
+          fi
+
+          while read -r line; do
+              SapControlArray=($line)
+              SapControlArray[4]=$(ping -c 1 ${SapControlArray[0]} | grep data | cut -d"(" -f2 | cut -d")" -f1)
+
+              # if instance not reachable
+              if [[ -z ${SapControlArray[4]} ]]; then
+                echo "instance ${SapControlArray[0]} is not reachable via ping or instance not running...exiting..."
+                exit 2
+              fi
+
+              SapControlArray[5]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].InstanceId' --region {{global:REGION}} --output text)
+              SapControlArray[6]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].InstanceType' --region {{global:REGION}} --output text)
+              SapControlArray[7]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].SecurityGroups[].GroupId' --region {{global:REGION}} --output text)
+              echo ${SapControlArray[*]} >> ${WORKDIR}/SapSystemList.txt
+
+              # check if application is not running on any instance
+              if [[ ${SapControlArray[3]} == "GRAY" ]]; then
+                echo "Database on instance ${SapControlArray[0]} is not running...exiting..."
+                exit 4
+              fi
+
+              # check if hostname is same as the new instance that is getting spun up
+              if [[ ${SapControlArray[0]} == ${HanaDbStandbyHostname} ]]; then
+                echo "instance exists with the same hostname ${HanaDbStandbyHostname}...exiting..."
+                exit 5
+              fi
+
+              # check if ip is same as the new instance that is getting spun up
+              if [[ ! -z ${PrivateIp} ]]; then
+                if [[ ${SapControlArray[4]} == ${PrivateIp} ]]; then
+                  echo "instance exists with the same ip ${PrivateIp}...exiting..."
+                  exit 7
+                fi
+              fi
+
+              # check if security group provided is same as the one for exising db instance 
+              if [[ (${checkDbSecurityGroup}) && (${SapControlArray[2]} == "HDB|HDB_WORKER") ]]; then
+                if [[ ! ${SapControlArray[7]} =~ ${HanaDbSecurityGroup} ]]; then
+                  echo "Security group does not match with the security group of existing instance ${SapControlArray[0]}...exiting..."
+                  exit 8
+                fi
+              fi
+              TotalInstanceList+="${SapControlArray[5]} "
+          done < ${WORKDIR}/SapcontrolSystemList.txt
+          unset SapControlArray
+          echo ${TotalInstanceList} | xargs -n1 | sort -u | xargs
+          # check if password can be read
+          aws secretsmanager get-secret-value --secret-id {{ HanaDbPasswordSecretKey }} --region {{global:REGION}} > /dev/null
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetInstanceProfile
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetSubnetId
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aws ec2 describe-instances --filter Name=instance-id,Values={{ HanaPrimaryInstanceId }} --query 'Reservations[].Instances[].IamInstanceProfile.Arn' --region {{global:REGION}} --output text | cut -d "/" -f2 | tr -d '\n'
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetSubnetId
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetInstanceType
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aws ec2 describe-instances --filter Name=instance-id,Values={{ HanaPrimaryInstanceId }} --query 'Reservations[].Instances[].SubnetId' --region {{global:REGION}} --output text | tr -d '\n'
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetInstanceType
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetDnsParameterList
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aws ec2 describe-instances --filter Name=instance-id,Values={{ HanaPrimaryInstanceId }} --query 'Reservations[].Instances[].InstanceType' --region {{global:REGION}} --output text  | tr -d '\n'
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetDnsParameterList
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: CreateEc2Instance
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Derive DNS Type from parent stack
+          DNSParameterList=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='DNSParameterList'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          [[ -z "$DNSParameterList" ]] && DNSParameterList=local || DNSParameterList=${DNSParameterList}
+          echo -n ${DNSParameterList}
+  - name: CreateEc2Instance
+    action: aws:createStack
+    nextStep: GetInstanceId
+    isEnd: false
+    inputs:
+      StackName: '{{ CreateCfnStackName.Output }}'
+      TemplateBody: |-
+        {
+            "AWSTemplateFormatVersion": "2010-09-09",
+            "Description": "Deploy a Single EC2 Instance",
+            "Parameters": {
+                "Ec2KeyPair": {
+                    "Type": "AWS::EC2::KeyPair::KeyName",
+                    "Default": "home",
+                    "Description": "Name of an existing Amazon EC2 key pair."
+                },
+                "Ec2AmiId": {
+                    "Type": "String",
+                    "Description": "EC2 Linux AMI ID for HANA master and standby nodes."
+                },
+                "Ec2InstanceType": {
+                    "Type": "String",
+                    "Description": "Instance type for SAP HANA host.",
+                    "Default": "r5.2xlarge"
+                },
+                "Ec2IAMProfile": {
+                    "Type": "String",
+                    "Description": "IAM profile"
+                },
+                "Ec2SecurityGroup": {
+                    "Type": "String",
+                    "Description": "SG"
+                },
+                "Ec2Subnet": {
+                    "Type": "String",
+                    "Description": "Subnet"
+                },
+                "Byoip": {
+                    "Type": "String",
+                    "Description": "Byoip",
+                    "Default": ""
+                },
+                "DNSParameterList": {
+                    "Type": "CommaDelimitedList",
+                    "Description": "Name to use for fully qualified domain names.",
+                    "Default": ""
+                },
+                "ParentDeploymentName": {
+                    "Type": "String",
+                    "Description": "Full name of the parent deployment.",
+                    "Default": ""
+                },
+                "HanaDbStandbyHostname": {
+                    "Type": "String",
+                    "Description": "Host name to use for SAP HANA standby node (DNS short name)."
+                }
+            },
+            "Conditions": {
+                "isByoip": {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                "",
+                                {
+                                    "Ref": "Byoip"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "EnableRoute53": {
+                    "Fn::Equals": [
+                        {
+                            "Fn::Select": [
+                                0,
+                                {
+                                    "Ref": "DNSParameterList"
+                                }
+                            ]
+                        },
+                        "Route53"
+                    ]
+                },
+                "isGovRegion": {
+                    "Fn::Or": [
+                        {
+                            "Fn::Equals": [
+                                "us-gov-west-1",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        },
+                        {
+                            "Fn::Equals": [
+                                "us-gov-east-1",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "Resources": {
+                "Ec2Instance": {
+                    "Type": "AWS::EC2::Instance",
+                    "Properties": {
+                        "Monitoring": true,
+                        "KeyName": {
+                            "Ref": "Ec2KeyPair"
+                        },
+                        "ImageId": {
+                            "Ref": "Ec2AmiId"
+                        },
+                        "IamInstanceProfile": {
+                            "Ref": "Ec2IAMProfile"
+                        },
+                        "UserData": {
+                            "Fn::Base64": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "#!/bin/bash -xv\n",
+                                        "systemctl restart amazon-ssm-agent\n"
+                                    ]
+                                ]
+                            }
+                        },
+                        "InstanceType": {
+                            "Ref": "Ec2InstanceType"
+                        },
+                        "SubnetId": {
+                            "Ref": "Ec2Subnet"
+                        },
+                        "PrivateIpAddress": {
+                            "Fn::If": [
+                                "isByoip",
+                                {
+                                    "Ref": "Byoip"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        },
+                        "SecurityGroupIds": [
+                            {
+                                "Ref": "Ec2SecurityGroup"
+                            }
+                        ],
+                        "Tags": [
+                          {
+                              "Key": "Name",
+                              "Value": {
+                                  "Fn::Join": [
+                                      "-",
+                                      [
+                                          {
+                                              "Ref": "ParentDeploymentName"
+                                          },
+                                          "HANA Standby",
+                                          {
+                                              "Ref": "HanaDbStandbyHostname"
+                                          }
+                                      ]
+                                  ]
+                              }
+                          }
+                        ]
+                    }
+                },
+                "R53Record": {
+                    "Condition": "EnableRoute53",
+                    "Type": "AWS::Route53::RecordSet",
+                    "DependsOn": "Ec2Instance",
+                    "Properties": {
+                        "HostedZoneName": {
+                            "Fn::Select": [
+                                1,
+                                {
+                                    "Ref": "DNSParameterList"
+                                }
+                            ]
+                        },
+                        "Name": {
+                            "Fn::Join": [
+                                ".",
+                                [
+                                    {
+                                        "Ref": "HanaDbStandbyHostname"
+                                    },
+                                    {
+                                        "Fn::Select": [
+                                            1,
+                                            {
+                                                "Ref": "DNSParameterList"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "TTL": 60,
+                        "ResourceRecords": [
+                            {
+                                "Fn::GetAtt": [
+                                    "Ec2Instance",
+                                    "PrivateIp"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "AutoRecoverAlarmMaster": {
+                    "Type": "AWS::CloudWatch::Alarm",
+                    "Properties": {
+                        "AlarmName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "AutoRecoverAlarmMaster"
+                                ]
+                            ]
+                        },
+                        "AlarmDescription": "Trigger a recovery when instance status check fails for 5 consecutive minute.",
+                        "Namespace": "AWS/EC2",
+                        "MetricName": "StatusCheckFailed_System",
+                        "Statistic": "Minimum",
+                        "Period": 60,
+                        "EvaluationPeriods": 5,
+                        "ComparisonOperator": "GreaterThanThreshold",
+                        "Threshold": 0,
+                        "AlarmActions": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:",
+                                        {
+                                            "Ref" : "AWS::Partition"
+                                        },
+                                        ":automate:",
+                                        {
+                                            "Ref": "AWS::Region"
+                                        },
+                                        ":ec2:recover"
+                                    ]
+                                ]
+                            }
+                        ],
+                        "Dimensions": [
+                            {
+                                "Name": "InstanceId",
+                                "Value": {
+                                    "Ref": "Ec2Instance"
+                                }
+                            }
+                        ]
+                    }
+                }                
+            }
+        }
+      DisableRollback: true
+      TimeoutInMinutes: 30
+      Parameters:
+        - ParameterKey: Ec2KeyPair
+          ParameterValue: '{{ GetKeyPairName.Output }}'
+        - ParameterKey: Ec2AmiId
+          ParameterValue: '{{ HanaDbAmiId }}'
+        - ParameterKey: Ec2InstanceType
+          ParameterValue: '{{ GetInstanceType.Output }}'
+        - ParameterKey: Ec2IAMProfile
+          ParameterValue: '{{ GetInstanceProfile.Output }}'
+        - ParameterKey: Ec2SecurityGroup
+          ParameterValue: '{{ GetDbSecurityGroup.Output }}'
+        - ParameterKey: Ec2Subnet
+          ParameterValue: '{{ GetSubnetId.Output }}'
+        - ParameterKey: Byoip
+          ParameterValue: '{{ PrivateIp }}'
+        - ParameterKey: DNSParameterList
+          ParameterValue: '{{ GetDnsParameterList.Output }}'
+        - ParameterKey: ParentDeploymentName
+          ParameterValue: '{{ GetParentDeploymentName.Output }}'
+        - ParameterKey: HanaDbStandbyHostname
+          ParameterValue: '{{ HanaDbStandbyHostname }}'
+  - name: GetInstanceId
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetInstanceIp
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aws cloudformation describe-stack-resources --stack-name {{ CreateCfnStackName.Output }} --query 'StackResources[?ResourceType==`AWS::EC2::Instance`].PhysicalResourceId' --region {{global:REGION}} --output text | tr -d '\n'
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetInstanceIp
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 180
+    nextStep: UpdateEtcHostsOnMaster
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          hostnamectl set-hostname --static {{ HanaDbStandbyHostname }}
+          _ip=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | tr -d '\n')
+          echo -n ${_ip}
+  - name: UpdateEtcHostsOnMaster
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: SyncEtcHostsFromMaster
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          DnsParams={{GetDnsParameterList.Output}}
+
+          if [[ ${DnsParams} == "local" ]]; then
+            Dns=local
+          else
+            Dns=$(echo ${DnsParams} | cut -d',' -f2)
+          fi
+
+          echo "{{GetInstanceIp.Output}}   {{ HanaDbStandbyHostname }}.${Dns}   {{ HanaDbStandbyHostname }}" >> /etc/hosts
+          cp /etc/hosts /hana/shared/hosts
+  - name: SyncEtcHostsFromMaster
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: CheckFileSystems
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          mount -a
+          fgrep -vxf /etc/hosts /hana/shared/hosts >>/etc/hosts
+          rm -f /hana/shared/hosts
+  - name: CheckFileSystems
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: InstallJq
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          DnsParams={{GetDnsParameterList.Output}}
+          if [[ ${DnsParams} == "local" ]]; then
+            Dns=local
+          else
+            Dns=$(echo ${DnsParams} | cut -d',' -f2)
+          fi
+
+          sap_sid=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='HANASID'].ParameterValue" --region {{global:REGION}} --output text)
+          sid_upper=$(echo ${sap_sid} | tr '[[:lower:]]' '[[:upper:]]')
+          DIRECTORY="/usr/sap/${sid_upper}"
+
+          if [ ! -d "$DIRECTORY" ]; then
+            echo "AMI does not have a directory ${DIRECTORY} that matched with sid ${sap_sid}..."
+            exit 32
+          fi
+  - name: InstallJq
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: RunPreScripts
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          source /etc/os-release
+          if [[ ${ID} == "sles" ]]; then
+            ZYPP_LOCK_TIMEOUT=180 zypper install -y jq
+          else
+            yum install -y jq
+          fi
+  - description: Run Pre Scripts
+    name: RunPreScripts
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: '2700'
+    nextStep: CleanupOldInstallation
+    isCritical: false
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Create temp working directory
+          mkdir -p /root/install/add-hana-standby/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-hana-standby/{{ SetActionId.Output }}
+
+          # declare
+          scripts='{{ GetConfigurationScripts.Output }}'
+          for row in $(echo ${scripts} | jq -r '.preConfigurationScripts.configurationScripts' | jq -r '.[] | @base64'); do
+            _jq() {
+              echo ${row} | base64 --decode | jq -r ${1}
+            }
+            s3_path=$(_jq '.s3URL')
+            s3_filename=$(basename ${s3_path})
+            local_file_path=${WORKDIR}/${s3_filename}
+            aws s3 cp ${s3_path} ${local_file_path}
+            bash ${local_file_path} > ${local_file_path}.log 2>&1
+            if [[ $? -ne 0 ]]; then
+              if [[ $(echo ${scripts} | jq -r '.preConfigurationScripts.onFailureBehaviour') != "CONTINUE" ]]; then
+                exit 1
+              fi
+            fi
+          done
+  - description: Adjust file systems accordingly
+    name: CleanupOldInstallation
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: '2700'
+    nextStep: AddHanaStandbyNode
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Create temp working directory
+          # mkdir -p /root/install/add-hana-standby/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-hana-standby/{{ SetActionId.Output }}
+          hana_sid=$(aws cloudformation describe-stacks --stack-name  {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='HANASID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          sid_upper=$(echo ${hana_sid} | tr '[[:lower:]]' '[[:upper:]]')
+          usrsap="/usr/sap/${sid_upper}"
+          HanaDbStandbyHostname={{ HanaDbStandbyHostname }}
+
+          # Error handling
+          set -eu
+          trap 'errorout \$?' ERR
+
+          errorout() {
+            echo "exiting with $?..."
+          }
+
+          is_mounted() {
+              findmnt "$1" > /dev/null
+          }
+
+          is_empty() {
+              if [ -z '$(ls -A "$1")' ]; then
+                  exit 0
+              else
+                  exit 1
+              fi
+          }
+          sudo ps -ef | grep '/usr/sap' | grep -v grep | awk '{print "kill -9 "$2}' | sh || true
+
+          until ! is_mounted ${usrsap}
+          do
+            umount ${usrsap}
+          done
+          fstab_entry=($(grep " ${usrsap} " /etc/fstab))
+          dns=$(grep -i " ${usrsap} " /etc/fstab | cut -d ' ' -f1 | cut -d '/' -f1,2)
+          sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport ${dns} /tmp
+          mkdir /tmp/usr-sap-${HanaDbStandbyHostname}
+
+          until ! is_mounted "/tmp"
+          do
+            umount /tmp
+          done
+
+          # clean up /usr/sap directory and then create directory with DB_SID
+          rm -rf /usr/sap/*
+          mkdir -p ${usrsap}
+          chmod 777 ${usrsap}
+
+          # delete the /usr/sap entry in fstab and create a new one
+          sed -i "/ \/usr\/sap\/${sid_upper} /d" /etc/fstab
+          echo "${dns}/usr-sap-${HanaDbStandbyHostname} ${fstab_entry[@]:1}" >> /etc/fstab
+
+          until is_mounted ${usrsap}
+          do
+            mount ${usrsap}
+          done
+  - description: Adjust file systems accordingly
+    name: AddHanaStandbyNode
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: '2700'
+    nextStep: RunPostScripts
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Create temp working directory
+          # mkdir -p /root/install/add-hana-standby/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-hana-standby/{{ SetActionId.Output }}
+
+          hana_sid=$(aws cloudformation describe-stacks --stack-name  {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='HANASID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+
+          # Error handling       
+          set -eu                
+          trap 'errorout \$?' ERR
+
+          errorout() {           
+            rm -f /hana/shared/password.xml
+            echo "exiting with $?..."
+          }                       
+
+          cd /hana/shared/${hana_sid}/global/hdb/saphostagent_setup/                   
+          /hana/shared/${hana_sid}/global/hdb/saphostagent_setup/saphostexec -install
+
+          hana_password=$(aws secretsmanager get-secret-value --secret-id {{ HanaDbPasswordSecretKey }} --region {{global:REGION}} | jq -r '.SecretString' | cut -d "\"" -f2 | tr -d '\n') 
+
+          mkfifo /hana/shared/password.xml
+          echo -e "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Passwords>\n<password><"'!'"[CDATA[${hana_password}]]></password>\n<sapadm_password><"'!'"[CDATA[${hana_password}]]></sapadm_password>\n<system_user_password><"'!'"[CDATA[${hana_password}]]></system_user_password>\n<root_password><"'!'"[CDATA[${hana_password}]]></root_password>\n</Passwords>\n" > /hana/shared/password.xml &
+          cat /hana/shared/password.xml | /hana/shared/${hana_sid}/hdblcm/hdblcm --action=add_hosts --addhosts={{ HanaDbStandbyHostname }}:role=standby --sid=${hana_sid} --read_password_from_stdin=xml --batch  
+          rm -f /hana/shared/password.xml
+  - description: Run Post Scripts
+    name: RunPostScripts
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: '2700'
+    isCritical: false
+    isEnd: true
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Create temp working directory
+          mkdir -p /root/install/add-hana-standby/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-hana-standby/{{ SetActionId.Output }}
+
+          scripts='{{ GetConfigurationScripts.Output }}'
+          for row in $(echo ${scripts} | jq -r '.postConfigurationScripts.configurationScripts' | jq -r '.[] | @base64'); do
+            _jq() {
+              echo ${row} | base64 --decode | jq -r ${1}
+            }
+            s3_path=$(_jq '.s3URL')
+            s3_filename=$(basename ${s3_path})
+            local_file_path=${WORKDIR}/${s3_filename}
+            aws s3 cp ${s3_path} ${local_file_path}
+            bash ${local_file_path} > ${local_file_path}.log 2>&1
+
+            if [[ $? -ne 0 ]]; then
+              if [[ $(echo ${scripts} | jq -r '.postConfigurationScripts.onFailureBehaviour') != "CONTINUE" ]]; then
+                exit 1
+              fi
+            fi
+          done
+  - name: DeleteOnFailure
+    action: aws:branch
+    isEnd: true
+    inputs:
+      Choices:
+        - NextStep: DeleteHANAStandbyNodeStack
+          Variable: '{{ DisableDeploymentRollback }}'
+          StringEquals: 'False'
+  - description: Delete HANA standby node CFN stack
+    name: DeleteHANAStandbyNodeStack
+    action: aws:deleteStack
+    isEnd: true
+    inputs:
+      StackName: '{{ CreateCfnStackName.Output }}'

@@ -1,0 +1,1395 @@
+schemaVersion: '0.3'
+description: Add an additional SAP Application Server (AAS) to an existing AWS Launch Wizard for SAP deployment (Single or Distributed)
+parameters:
+  PasInstanceId:
+    allowedPattern: ^i-[a-z0-9]{17}$
+    default: ''
+    description: (Required) Instance ID of the PAS node.
+    type: AWS::EC2::Instance::Id
+  AasHostname:
+    allowedPattern: ^[a-z0-9-]+$
+    default: examplenode02
+    description: (Required) Hostname of the new AAS node
+    maxChars: 13
+    type: String
+  AasInstanceNr:
+    allowedPattern: ([0-8]{1}[0-9]{1}|[9]{1}[0-7]{1})
+    description: (Required) Instance number of the new AAS node
+    maxChars: 2
+    type: String
+  Ec2KeyPair:
+    allowedPattern: ^[\x00-\x7F]{0,255}$
+    default: ''
+    description: (Optional) Key pair to be used for the new AAS node. If left blank, the key pair will be inferred from parent deployment.
+    maxChars: 255
+    type: String
+  AasSecurityGroup:
+    allowedPattern: ^(?:sg-[a-z0-9]{8}|sg-[a-z0-9]{17})?$
+    default: ''
+    description: (Optional) Security Group to be used for the new AAS node. If left blank, the security group will be inferred from parent deployment.
+    type: String
+  AasAmiId:
+    allowedPattern: ^ami-([a-z0-9]{8}|[a-z0-9]{17})$
+    default: ami-00000000000000000
+    description: (Required) AMI to be used for the new AAS node. Typically, this will be latest copy of existing AAS node.
+    type: String
+  AasInstanceType:
+    allowedPattern: ^[a-z]-?[a-z0-9-]{1,9}(flex)?.(nano|micro|small|medium|[0-9]*x?large|metal(-[0-9]*xl)?)?$
+    default: c5.large
+    description: (Required) Instance Type to be used for the new AAS node
+    maxChars: 20
+    type: String
+  PrivateIp:
+    allowedPattern: (^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$|^$)
+    default: ''
+    description: (Optional) Private IP address to use. If left blank, a private IP address will be automatically assigned from the subnets available pool.
+    type: String
+  AasSubnetId:
+    allowedPattern: ^subnet-([0-9a-f]{8}|[0-9a-f]{17})$
+    default: subnet-abcdef1234567890a
+    description: (Required) Subnet id to be used
+    type: String
+  DisableDeploymentRollback:
+    allowedValues:
+      - 'True'
+      - 'False'
+    default: 'True'
+    description: Disable rollback on failure.
+    type: String
+  ScriptFailureBehavior:
+    allowedValues:
+      - CONTINUE
+      - ROLLBACK
+    default: ROLLBACK
+    description: Action to take if any issues are encountering during pre/post script setup.
+    type: String
+  PreDeploymentScript:
+    allowedPattern: ^(s3://[a-z0-9\-\.\/]+)?$
+    default: ''
+    description: '(Optional) Full s3 URI path of pre-deployment script. Example format: s3://example-bucket-name/script.sh'
+    type: String
+  PostDeploymentScript:
+    allowedPattern: ^(s3://[a-z0-9\-\.\/]+)?$
+    default: ''
+    description: '(Optional) Full s3 URI path of post-deployment script. Example format: s3://example-bucket-name/script.sh'
+    type: String
+mainSteps:
+  - name: GetParentDeploymentName
+    action: aws:runCommand
+    nextStep: GetDeploymentId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          parentDeploymentName=$(aws ec2 describe-instances --instance-ids {{ PasInstanceId }} --query 'Reservations[*].Instances[*].Tags[?Key==`aws:cloudformation:stack-name`].Value' --region {{global:REGION}} --output text)
+
+          if [ -z "$parentDeploymentName" ]; then
+            echo "Failed to get parent deployment ID."
+            exit 1
+          fi
+
+          echo -n $parentDeploymentName
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetDeploymentId
+    action: aws:runCommand
+    nextStep: GetDeploymentSpecifications
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+          appName="${parentDeploymentName#LaunchWizard-}"
+
+          # Initialize variables
+          deploymentList=()
+          next_token=""
+
+          # Loop through all pages
+          while true; do
+              # Call the AWS CLI command and store the output in a variable
+              if [ -z "$next_token" ]; then
+                  output=$(aws launch-wizard list-deployments --max-items 100 --page-size 100)
+              else
+                  output=$(aws launch-wizard list-deployments --max-items 100 --page-size 100 --starting-token "$next_token")
+              fi
+
+              # Extract the deployments list from the output
+              deployments=$(echo "$output" | jq -r '.deployments')
+
+              # Append the deployments to the list variable
+              deploymentList+=("$deployments")
+
+              # Check if there is a next token in the response
+              next_token=$(echo "$output" | jq -r '.NextToken')
+
+              # If there is no next token, exit the loop
+              if [ -z "$next_token" ] || [ "$next_token" == "null" ]; then
+                  break
+              fi
+          done
+
+          # Filter the list for the object with specified application name
+          applicationObject=$(echo "${deploymentList[@]}" | jq --arg appName "$appName" -r '.[] | select(.name == $appName)')
+
+          if [ -z "$applicationObject" ]; then
+              echo "No deployment with name ${appName} found."
+              exit 1
+          else
+              deploymentId=$(echo "$applicationObject" | jq -r '.id')
+          fi
+
+          if [ -z "$deploymentId" ]; then
+            echo "Failed to identify deployment ID for ${appName}."
+            exit 1
+          fi
+
+          echo -n $deploymentId
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetDeploymentSpecifications
+    action: aws:executeAwsApi
+    nextStep: CreateCfnStackName
+    isEnd: false
+    inputs:
+      Service: launch-wizard
+      Api: GetDeployment
+      deploymentId: '{{ GetDeploymentId.Output }}'
+    outputs:
+      - Name: deploymentName
+        Selector: $.deployment.name
+        Type: String
+      - Name: ApplicationSecurityGroupId
+        Selector: $.deployment.specifications.ApplicationSecurityGroupId
+        Type: String
+      - Name: KeyPairName
+        Selector: $.deployment.specifications.KeyPairName
+        Type: String
+  - name: CreateCfnStackName
+    action: aws:runCommand
+    nextStep: SetActionId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ## Set CFN stack name for execution
+          cfnStackName={{ GetParentDeploymentName.Output }}-{{ AasHostname }}
+
+          echo -n $cfnStackName
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: SetActionId
+    action: aws:runCommand
+    nextStep: GetKeyPairName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          ## Set ActionId.
+          addActionIdPrefix='A'
+          generatedUuid=$(uuidgen)
+
+          # Ex. A-7e8ab1dc-39fe-4979-8243-2ad2bc507b3a
+          actionId=$addActionIdPrefix-$generatedUuid
+
+          echo -n $actionId
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetKeyPairName
+    action: aws:runCommand
+    nextStep: GetAasSecurityGroup
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ec2KeyPair={{ Ec2KeyPair }}
+
+          ## If EC2 Key Pair name was not provided, attempt to identify from deployment specifications
+          if [ ! -n "$ec2KeyPair" ]; then
+            ec2KeyPair={{ GetDeploymentSpecifications.KeyPairName }}
+          fi
+
+          echo -n $ec2KeyPair
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetAasSecurityGroup
+    action: aws:runCommand
+    nextStep: GetConfigurationScripts
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aasSecurityGroup={{ AasSecurityGroup }}
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+
+          # MT: If Security Group ID was not provided, attempt to identify from source instance
+          if [ ! -n "$aasSecurityGroup" ]; then
+            #Determine IMDSv1 or IMDSv2
+            METADATA_RESPONSE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://169.254.169.254/latest/meta-data/)
+            HEADER=""
+            if [ $METADATA_RESPONSE -ne 200 ]; then
+            echo -n "Use IMDSv2!"
+            TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+            HEADER="X-aws-ec2-metadata-token: $TOKEN"
+            fi
+
+            mac=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/mac)
+            aasSecurityGroup=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/network/interfaces/macs/${mac}/security-group-ids)
+          fi
+
+          if [ -z "$aasSecurityGroup" ]; then
+              echo "Unable to identify security group ID."
+              exit 1
+          fi
+
+          echo -n $aasSecurityGroup | sed -e "s/ /,/g" 
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetConfigurationScripts
+    action: aws:runCommand
+    nextStep: DiscoverAndChecks
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          ## Set initial variable values from automation inputs
+          preDeploymentScript={{ PreDeploymentScript }}
+          postDeploymentScript={{ PostDeploymentScript }}
+          scriptFailureBehavior={{ ScriptFailureBehavior }}
+
+          ## Set ConfigurationScripts based on input
+          configurationScripts='{
+            "preConfigurationScripts": {
+              "configurationScripts": [],
+              "onFailureBehaviour": "'$scriptFailureBehavior'",
+              "timeoutInMinutes": 0
+            },
+            "postConfigurationScripts": {
+              "configurationScripts": [],
+              "onFailureBehaviour": "'$scriptFailureBehavior'",
+              "timeoutInMinutes": 0
+            }
+          }'
+
+          ## Update configurationScripts if s3 URI was passed for pre-deployment scripts.
+          if [[ -n "$preDeploymentScript" ]]; then
+            configurationScripts=$(echo $configurationScripts | jq --arg key "sequence" '.preConfigurationScripts.configurationScripts[0][$key] = 0')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "s3URL" --arg value $preDeploymentScript '.preConfigurationScripts.configurationScripts[0][$key] = $value')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "nodeTypesToRunScriptFor" '.preConfigurationScripts.configurationScripts[0][$key] = ["DB"]')
+          fi
+
+          ## Update configurationScripts if s3 URI was passed for post-deployment scripts.
+          if [[ -n "$postDeploymentScript" ]]; then
+            configurationScripts=$(echo $configurationScripts | jq --arg key "sequence" '.postConfigurationScripts.configurationScripts[0][$key] = 0')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "s3URL" --arg value $postDeploymentScript '.postConfigurationScripts.configurationScripts[0][$key] = $value')
+            configurationScripts=$(echo $configurationScripts | jq --arg key "nodeTypesToRunScriptFor" '.postConfigurationScripts.configurationScripts[0][$key] = ["DB"]')
+          fi
+
+          echo -n $configurationScripts
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: DiscoverAndChecks
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 180
+    nextStep: GetInstanceProfile
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # declare
+          checkAppSecurityGroup=true
+          PrivateIp={{ PrivateIp }}
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+          AasHostname={{ AasHostname }}
+          AasInstanceNr={{ AasInstanceNr }}
+          AasSecurityGroup={{ AasSecurityGroup }}
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "adding a aas node for ${parentDeploymentName}..." > ${LOGFILE} 2>&1
+          echo "deriving parameters from parent deployment ${parentDeploymentName}..." >> ${LOGFILE} 2>&1
+
+          is_hana_installed_in_parent=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='InstallHANA'].ParameterValue" --region {{global:REGION}} --output text)
+          is_sap_installed_in_parent=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='InstallSap'].ParameterValue" --region {{global:REGION}} --output text)
+
+          echo "check if hana is installed...${is_hana_installed_in_parent}" >> ${LOGFILE} 2>&1
+          echo "check if sap is installed...${is_sap_installed_in_parent}"   >> ${LOGFILE} 2>&1
+
+          # check if application install is set to true
+          if [[ (${is_hana_installed_in_parent} == "No") || (${is_sap_installed_in_parent} == "No") ]]; then
+            echo "Adding nodes is only possible if sap application is installed in the parent deployment...HANA Installed=....${is_hana_installed_in_parent}...SAP Installed=....${is_sap_installed_in_parent}...exiting..." 2>&1 | tee -a ${LOGFILE}
+            exit 8
+          fi
+
+          # derive from parent CFN stack
+          pas_inst_num=$(aws cloudformation describe-stacks --stack-name  ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='AppInstallationSpecification'].ParameterValue" --region {{global:REGION}} --output text | cut -d "," -f4 | cut -d ":" -f2 | cut -d "\"" -f2)
+          pas_hostname=$(hostname)
+          db_inst_num=$(aws cloudformation describe-stacks --stack-name  ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='SAPInstanceNum'].ParameterValue" --region {{global:REGION}} --output text)
+          db_master_hostname=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='HANAHostname'].ParameterValue" --region {{global:REGION}} --output text)
+
+          echo "deriving pas instance number from parent deployment...${pas_inst_num}" >> ${LOGFILE} 2>&1
+          echo "deriving pas hostname from OS...${pas_hostname}" >> ${LOGFILE} 2>&1
+          echo "deriving database instance number from parent deployment...${db_inst_num}" >> ${LOGFILE} 2>&1
+          echo "deriving database master instance hostanme from parent deployment...${db_master_hostname}" >> ${LOGFILE} 2>&1
+
+          if [[ -f "/usr/sap/hostctrl/exe/sapcontrol" ]]; then
+              /usr/sap/hostctrl/exe/sapcontrol -nr ${pas_inst_num} -host ${pas_hostname} -function GetSystemInstanceList | egrep 'GREEN|GRAY' | cut -d, -f1,2,6,7 --output-delimiter=' ' >> ${WORKDIR}/SapcontrolSystemList.txt
+              /usr/sap/hostctrl/exe/sapcontrol -nr ${db_inst_num} -host ${db_master_hostname} -function GetSystemInstanceList | egrep 'GREEN|GRAY' | cut -d, -f1,2,6,7 --output-delimiter=' ' >> ${WORKDIR}/SapcontrolSystemList.txt
+          else    
+              echo "/usr/sap/hostctrl/exe/sapcontrol not found...exiting..." 2>&1 | tee -a ${LOGFILE}
+              exit 1
+          fi
+
+          echo "running validations..." >> ${LOGFILE} 2>&1
+          while read -r line; do
+              SapControlArray=($line)
+              SapControlArray[4]=$(ping -c 1 ${SapControlArray[0]} | grep data | cut -d"(" -f2 | cut -d")" -f1)
+
+              # if instance not reachable
+              if [[ -z ${SapControlArray[4]} ]]; then
+                echo "instance ${SapControlArray[0]} is not reachable via ping or instance not running...exiting..." 2>&1 | tee -a ${LOGFILE}
+                exit 2
+              fi
+
+              SapControlArray[5]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].InstanceId' --region {{global:REGION}} --output text)
+              SapControlArray[6]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].InstanceType' --region {{global:REGION}} --output text)
+              SapControlArray[7]=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].SecurityGroups[].GroupId' --region {{global:REGION}} --output text)
+              echo ${SapControlArray[*]} >> ${WORKDIR}/SapSystemList.txt
+
+              # check if application is not running on any instance
+              if [[ ${SapControlArray[3]} == "GRAY" ]]; then
+                echo "Application on instance ${SapControlArray[0]} is not running...exiting..." 2>&1 | tee -a ${LOGFILE}
+                exit 4
+              fi
+
+              # check if hostname is same as the new instance that is getting spun up
+              if [[ ${SapControlArray[0]} == ${AasHostname} ]]; then
+                echo "instance exists with the same hostname ${AasHostname}...exiting..." 2>&1 | tee -a ${LOGFILE}
+                exit 5
+              fi
+
+              # check if instance nr is same as the new instance that is getting spun up
+              # if [[ ${SapControlArray[1]} -eq $((10#$SAPAASInstanceNr)) ]]; then
+              #  echo "instance exists with the same instance number ${AasInstanceNr}...exiting..." 2>&1 | tee -a ${LOGFILE}
+              #  exit 6
+              # fi
+              # check if ip is same as the new instance that is getting spun up
+
+              if [[ ! -z ${PrivateIp} ]]; then
+                if [[ ${SapControlArray[4]} == ${PrivateIp} ]]; then
+                  echo "instance exists with the same ip ${PrivateIp}...exiting..." 2>&1 | tee -a ${LOGFILE}
+                  exit 7
+                fi
+              fi
+
+              # check if security group provided is same as the one for existing app instance 
+              if [[ (${checkAppSecurityGroup}) && (${SapControlArray[2]} == "ABAP|GATEWAY|ICMAN|IGS") ]]; then
+                if [[ ! ${SapControlArray[7]} =~ ${AasSecurityGroup} ]]; then
+                  echo "Security group ${AasSecurityGroup} does not match with the security group ${SapControlArray[7]} of existing instance ${SapControlArray[0]}...exiting..." 2>&1 | tee -a ${LOGFILE}
+                  exit 8
+                fi
+              fi
+              TotalInstanceList+="${SapControlArray[5]} "
+          done < ${WORKDIR}/SapcontrolSystemList.txt
+          unset SapControlArray
+          echo ${TotalInstanceList} | xargs -n1 | sort -u | xargs 2>&1 | tee -a ${LOGFILE}
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetInstanceProfile
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetDNSParameterList
+    isEnd: false
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # MT: Retrieve Instance Profile
+          aws ec2 describe-instances --filter Name=instance-id,Values={{ PasInstanceId }} --query 'Reservations[].Instances[].IamInstanceProfile.Arn' --region {{global:REGION}} --output text | cut -d "/" -f2 | tr -d '\n'
+
+          # declare
+          #parentDeploymentName={{ GetParentDeploymentName.Output }}
+
+          # Create temp working directory
+          #mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          #WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          #LOGFILE=${WORKDIR}/addnode.log
+
+          #echo "deriving instance profile from parent deployment...${parentDeploymentName}" >> ${LOGFILE} 2>&1
+          # derive from parent CFN stack
+          #pas_inst_num=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='AppInstallationSpecification'].ParameterValue" --region {{global:REGION}} --output text | grep -Eo '\"CI_INSTANCE_NR\"\:\"[0-9]{2}\"' | awk -F: '{ print $2 }' | tr -d '"')
+          #pas_hostname=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='SAPPASHostname'].ParameterValue" --region {{global:REGION}} --output text)
+          #if [[ -f "/usr/sap/hostctrl/exe/sapcontrol" ]]; then
+          #    /usr/sap/hostctrl/exe/sapcontrol -nr ${pas_inst_num} -host ${pas_hostname} -function GetSystemInstanceList | egrep 'GREEN|GRAY' | cut -d, -f1,2,6,7 --output-delimiter=' ' >> ${WORKDIR}/SapcontrolSystemList.txt
+          #else    
+          #    echo "/usr/sap/hostctrl/exe/sapcontrol not found...exiting..." 2>&1 | tee -a ${LOGFILE}
+          #    exit 1
+          #fi
+          #while read -r line; do
+          #    if [[ ${line} =~ "ABAP|GATEWAY|ICMAN|IGS" ]]; then
+          #      SapControlArray=($line)
+          #      SapControlArray[4]=$(ping -c 1 ${SapControlArray[0]} | grep data | cut -d"(" -f2 | cut -d")" -f1)
+          #      # if instance not reachable
+          #      if [[ -z ${SapControlArray[4]} ]]; then
+          #        echo "instance ${SapControlArray[0]} is not reachable via ping or instance not running...exiting..." 2>&1 | tee -a ${LOGFILE}
+          #        exit 2
+          #      fi
+          #      instance_profile_arn=$(aws ec2 describe-instances --filter Name=private-ip-address,Values=${SapControlArray[4]} --query 'Reservations[].Instances[].IamInstanceProfile.Arn' --region {{global:REGION}} --output text | cut -d'/' -f2 | tr -d '\n')
+          #      echo "instance profile to be set to the new instance is ${instance_profile_arn}..." >> ${LOGFILE} 2>&1
+          #      echo -n ${instance_profile_arn}
+          #      break
+          #    fi
+          #done < ${WORKDIR}/SapcontrolSystemList.txt
+          #unset SapControlArray
+
+          # MT: Retrieve Instance Profile from Metadata
+          #Determine IMDSv1 or IMDSv2
+          #METADATA_RESPONSE=$(curl --write-out '%{http_code}' --silent --output /dev/null http://169.254.169.254/latest/meta-data/)
+          #HEADER=""
+          #if [ $METADATA_RESPONSE -ne 200 ]; then
+          #echo -n "Use IMDSv2!"
+          #TOKEN=`curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600"`
+          #HEADER="X-aws-ec2-metadata-token: $TOKEN"
+          #fi
+
+          #instance_profile_arn=$(curl --header "$HEADER" --silent http://169.254.169.254/latest/meta-data/iam/info | sed -n 's/.*"InstanceProfileArn" : "\(.*\)".*/\1/p')
+          #echo "instance profile to be set to the new instance is ${instance_profile_arn}..." >> ${LOGFILE} 2>&1
+          #echo -n ${instance_profile_arn} | sed 's#.*/##'
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetDNSParameterList
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: CreateEc2Instance
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # declare
+          parentDeploymentName={{ GetParentDeploymentName.Output }}
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "deriving DomainName type and parameters from parent deployment...${parentDeploymentName}" >> ${LOGFILE} 2>&1
+
+          # derive DomainName from parent stack
+          DomainName=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='DomainName'].ParameterValue" --region {{global:REGION}} --output text)
+          HostedZoneId=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='HostedZoneId'].ParameterValue" --region {{global:REGION}} --output text)
+          HostedZoneName=$(aws cloudformation describe-stacks --stack-name ${parentDeploymentName} --query "Stacks[*].Parameters[?ParameterKey=='HostedZoneName'].ParameterValue" --region {{global:REGION}} --output text)
+          # MT: Retrieve hostname from OS
+          PasHostName=$(hostname)
+          DNSParameterList="${DomainName},${HostedZoneId},${HostedZoneName},${PasHostName}"
+          echo -n ${DNSParameterList}
+  - name: CreateEc2Instance
+    action: aws:createStack
+    nextStep: GetInstanceId
+    isEnd: false
+    inputs:
+      StackName: '{{ CreateCfnStackName.Output }}'
+      TemplateBody: |-
+        {
+            "AWSTemplateFormatVersion": "2010-09-09",
+            "Description": "Deploy a Single EC2 Instance",
+            "Parameters": {
+                "Ec2KeyPair": {
+                    "Type": "AWS::EC2::KeyPair::KeyName",
+                    "Default": "home",
+                    "Description": "Name of an existing Amazon EC2 key pair."
+                },
+                "Ec2AmiId": {
+                    "Type": "String",
+                    "Description": "EC2 Linux AMI ID for HANA master and worker nodes."
+                },
+                "Ec2InstanceType": {
+                    "Type": "String",
+                    "Description": "Instance type for SAP HANA host.",
+                    "Default": "r5.2xlarge"
+                },
+                "Ec2IAMProfile": {
+                    "Type": "String",
+                    "Description": "IAM profile"
+                },
+                "Ec2SecurityGroup": {
+                    "Type": "List<AWS::EC2::SecurityGroup::Id>",
+                    "Description": "SG"
+                },
+                "Ec2Subnet": {
+                    "Type": "String",
+                    "Description": "Subnet"
+                },
+                "Byoip": {
+                    "Type": "String",
+                    "Description": "Byoip",
+                    "Default": ""
+                },
+                "DNSParameterList": {
+                    "Type": "CommaDelimitedList",
+                    "Description": "Name to use for fully qualified domain names.",
+                    "Default": ""
+                },
+                "ParentDeploymentName": {
+                    "Type": "String",
+                    "Description": "Full name of the parent deployment.",
+                    "Default": ""
+                },
+                "AasHostname": {
+                    "Type": "String",
+                    "Description": "Host name to use for SAP AAS node (DNS short name)."
+                }
+            },
+            "Conditions": {
+                "isByoip": {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                "",
+                                {
+                                    "Ref": "Byoip"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "EnableRoute53": {
+                    "Fn::Not": [
+                        {
+                            "Fn::Equals": [
+                                {
+                                    "Fn::Select": [
+                                        2,
+                                        {
+                                            "Ref": "DNSParameterList"
+                                        }
+                                    ]
+                                },
+                                "None"
+                            ]
+                        }
+                    ]
+                },
+                "isGovRegion": {
+                    "Fn::Or": [
+                        {
+                            "Fn::Equals": [
+                                "us-gov-west-1",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        },
+                        {
+                            "Fn::Equals": [
+                                "us-gov-east-1",
+                                {
+                                    "Ref": "AWS::Region"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "Resources": {
+                "Ec2Instance": {
+                    "Type": "AWS::EC2::Instance",
+                    "Properties": {
+                        "Monitoring": true,
+                        "KeyName": {
+                            "Ref": "Ec2KeyPair"
+                        },
+                        "ImageId": {
+                            "Ref": "Ec2AmiId"
+                        },
+                        "IamInstanceProfile": {
+                            "Ref": "Ec2IAMProfile"
+                        },
+                        "UserData": {
+                            "Fn::Base64": {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "#!/bin/bash -xv\n",
+                                        "systemctl restart amazon-ssm-agent\n",
+                                    ]
+                                ]
+                            }
+                        },
+                        "InstanceType": {
+                            "Ref": "Ec2InstanceType"
+                        },
+                        "NetworkInterfaces": [
+                            {
+                                "NetworkInterfaceId": {
+                                    "Ref": "NetworkInterface"
+                                },
+                                "DeviceIndex": "0"
+                            }
+                        ],
+                        "Tags": [
+                            {
+                                "Key": "Name",
+                                "Value": {
+                                    "Fn::Join": [
+                                        " : ",
+                                        [
+                                          {
+                                              "Ref": "ParentDeploymentName"
+                                          },
+                                          "AAS",
+                                          {
+                                              "Ref": "AasHostname"
+                                          }
+                                        ]
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                },
+                "NetworkInterface": {
+                    "Type": "AWS::EC2::NetworkInterface",
+                    "Properties": {
+                        "Description": "Network Interface for {{ AasHostname }}",
+                        "SubnetId": {
+                            "Ref": "Ec2Subnet"
+                        },
+                        "GroupSet": { "Ref": "Ec2SecurityGroup" },
+                        "SourceDestCheck": true,
+                        "Tags": [
+                            {
+                                "Key": "Network",
+                                "Value": "Private"
+                            }
+                        ],
+                        "PrivateIpAddress": {
+                            "Fn::If": [
+                                "isByoip",
+                                {
+                                    "Ref": "Byoip"
+                                },
+                                {
+                                    "Ref": "AWS::NoValue"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "R53Record": {
+                    "Condition": "EnableRoute53",
+                    "Type": "AWS::Route53::RecordSet",
+                    "DependsOn": "Ec2Instance",
+                    "Properties": {
+                        "HostedZoneId": {
+                            "Fn::Select": [
+                                1,
+                                {
+                                    "Ref": "DNSParameterList"
+                                }
+                            ]
+                        },
+                        "Name": {
+                            "Fn::Join": [
+                                ".",
+                                [
+                                    {
+                                        "Ref": "AasHostname"
+                                    },
+                                    {
+                                        "Fn::Select": [
+                                          2,
+                                          {
+                                            "Ref": "DNSParameterList"
+                                          }
+                                      ]
+                                    }
+                                ]
+                            ]
+                        },
+                        "Type": "A",
+                        "TTL": 60,
+                        "ResourceRecords": [
+                            {
+                                "Fn::GetAtt": [
+                                    "NetworkInterface",
+                                    "PrimaryPrivateIpAddress"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "AutoRecoverAlarmMaster": {
+                    "Type": "AWS::CloudWatch::Alarm",
+                    "Properties": {
+                        "AlarmName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "AutoRecoverAlarmMaster"
+                                ]
+                            ]
+                        },
+                        "AlarmDescription": "Trigger a recovery when instance status check fails for 5 consecutive minute.",
+                        "Namespace": "AWS/EC2",
+                        "MetricName": "StatusCheckFailed_System",
+                        "Statistic": "Minimum",
+                        "Period": 60,
+                        "EvaluationPeriods": 5,
+                        "ComparisonOperator": "GreaterThanThreshold",
+                        "Threshold": 0,
+                        "AlarmActions": [
+                            {
+                                "Fn::Join": [
+                                    "",
+                                    [
+                                        "arn:",
+                                        {
+                                            "Ref": "AWS::Partition"
+                                        },
+                                        ":automate:",
+                                        {
+                                            "Ref": "AWS::Region"
+                                        },
+                                        ":ec2:recover"
+                                    ]
+                                ]
+                            }
+                        ],
+                        "Dimensions": [
+                            {
+                                "Name": "InstanceId",
+                                "Value": {
+                                    "Ref": "Ec2Instance"
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+      DisableRollback: true
+      TimeoutInMinutes: 30
+      Parameters:
+        - ParameterKey: Ec2KeyPair
+          ParameterValue: '{{ GetKeyPairName.Output }}'
+        - ParameterKey: Ec2AmiId
+          ParameterValue: '{{ AasAmiId }}'
+        - ParameterKey: Ec2InstanceType
+          ParameterValue: '{{ AasInstanceType }}'
+        - ParameterKey: Ec2IAMProfile
+          ParameterValue: '{{ GetInstanceProfile.Output }}'
+        - ParameterKey: Ec2SecurityGroup
+          ParameterValue: '{{ GetAasSecurityGroup.Output }}'
+        - ParameterKey: Ec2Subnet
+          ParameterValue: '{{ AasSubnetId }}'
+        - ParameterKey: Byoip
+          ParameterValue: '{{ PrivateIp }}'
+        - ParameterKey: DNSParameterList
+          ParameterValue: '{{ GetDNSParameterList.Output }}'
+        - ParameterKey: ParentDeploymentName
+          ParameterValue: '{{ GetParentDeploymentName.Output }}'
+        - ParameterKey: AasHostname
+          ParameterValue: '{{ AasHostname }}'
+  - name: GetInstanceId
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetInstanceIp
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "deriving instance id of the newly created node..." >> ${LOGFILE} 2>&1
+          instanceId=$(aws cloudformation describe-stack-resources --stack-name {{ CreateCfnStackName.Output }} --query 'StackResources[?ResourceType==`AWS::EC2::Instance`].PhysicalResourceId' --region {{global:REGION}} --output text | tr -d '\n')
+          echo "new ec2 instance id is...${instanceId}..." >> ${LOGFILE} 2>&1
+          echo -n ${instanceId}
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetInstanceIp
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 120
+    nextStep: UpdateEtcHosts
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "setting hostname to the newly created node..." >> ${LOGFILE} 2>&1
+          hostnamectl set-hostname --static {{ AasHostname }}
+
+          echo "deriving ip of the new node..." >> ${LOGFILE} 2>&1
+          _ip=$(ip -4 addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | tr -d '\n')
+          echo "ip of the new node is...${_ip}..." >> ${LOGFILE} 2>&1
+          echo -n ${_ip}
+  - name: UpdateEtcHosts
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 120
+    nextStep: UpdateEtcExportsOnPas
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          DnsParams={{ GetDNSParameterList.Output }}
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "updating /etc/hosts file on pas..." >> ${LOGFILE} 2>&1
+          DomainName=$(echo ${DnsParams} | cut -d',' -f1)
+          HostedZoneId=$(echo ${DnsParams} | cut -d',' -f2)
+          HostedZoneName=$(echo ${DnsParams} | cut -d',' -f3)
+
+          if [[ ${HostedZoneName} == "None" ]]; then
+            Dns=local
+          else
+            Dns=${HostedZoneName}
+          fi
+
+          sed -i.bak '/{{ AasHostname }}/d' /etc/hosts
+          echo "{{GetInstanceIp.Output}}   {{ AasHostname }}.${Dns}   {{ AasHostname }}" >> /etc/hosts
+          echo "updated /etc/hosts file on pas with {{ AasHostname }}.${Dns} and ip {{GetInstanceIp.Output}}..." >> ${LOGFILE} 2>&1
+          sleep 30 
+          cp -rp /etc/hosts /sapmnt/hosts
+          sleep 30
+  - name: UpdateEtcExportsOnPas
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 120
+    nextStep: CheckFileSystems
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # declare
+          AasHostname={{ AasHostname }}
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "checking if /sapmnt is NFS or EFS..." >> ${LOGFILE} 2>&1
+          mount_type=$(cat /etc/fstab | grep -i sapmnt | awk '{print $3}')
+
+          if [[ ${mount_type} == "nfs" ]]; then
+            echo "mount type of sapmnt is nfs. nothing to be done...exiting..."
+            exit 0
+          fi
+
+          echo "mount type of /sapmnt is ${mount_type}. updating /etc/exports file on pas..." >> ${LOGFILE} 2>&1
+
+          # body
+          sed -i.bak '/{{ AasHostname }}/d' /etc/exports
+
+          if [ -s "/etc/exports" ]; then
+            echo "/sapmnt     ${AasHostname}(rw,no_root_squash,no_subtree_check)" >> /etc/exports
+          else
+            echo "/sapmnt     ${AasHostname}(rw,no_root_squash,no_subtree_check)"  > /etc/exports
+          fi
+          # MT
+          exportfs -rav
+  - name: CheckFileSystems
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: SyncEtcHostsFromPas
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          DnsParams={{ GetDNSParameterList.Output }}
+          DomainName=$(echo ${DnsParams} | cut -d',' -f1)
+          HostedZoneId=$(echo ${DnsParams} | cut -d',' -f2)
+          HostedZoneName=$(echo ${DnsParams} | cut -d',' -f3)
+          # MT:
+          pas_hostname=$(echo ${DnsParams} | cut -d',' -f4)
+
+          if [[ ${HostedZoneName} == "None" ]]; then
+            Dns=local
+          else
+            Dns=${HostedZoneName}
+          fi
+
+          sap_sid=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPSID'].ParameterValue" --region {{global:REGION}} --output text)
+          sid_upper=$(echo ${sap_sid} | tr '[[:lower:]]' '[[:upper:]]')
+          DIRECTORY="/usr/sap/${sid_upper}"
+
+          if [ ! -d "$DIRECTORY" ]; then
+            echo "AMI does not have a directory ${DIRECTORY}."
+            exit 32
+          fi
+
+          mount_type=$(cat /etc/fstab | grep -i sapmnt | awk '{print $3}')
+
+          # MT
+          if [[ ${mount_type} == "xfs" ]]; then
+            echo "/sapmnt is a local disk. Remove and mount disk from PAS instead..."
+            umount /sapmnt
+            sed -i.bak '\/\/sapmnt/d' /etc/fstab
+            
+            if [[ ! -e /etc/auto.direct ]]; then
+              touch /etc/auto.direct
+            fi
+
+            sed -i.bak '\/\/sapmnt/d' /etc/auto.direct
+            sed -i.bak 's/+auto.master/\/\- auto.direct/g' /etc/auto.master
+
+            #pas_hostname=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPPASHostname'].ParameterValue" --region {{global:REGION}} --output text)
+            echo -e "/sapmnt\t-rw,rsize=32768,wsize=32768,timeo=14,intr     ${pas_hostname}.${Dns}:/sapmnt\\n" >> /etc/auto.direct    
+            mount -t nfs ${pas_hostname}.${Dns}:/sapmnt /sapmnt
+            df
+          fi
+  - name: SyncEtcHostsFromPas
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: stopInstance
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+
+          until [[ -f /sapmnt/hosts ]]; do
+            sleep 5
+          done
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+          fgrep -vxf /etc/hosts /sapmnt/hosts >>/etc/hosts
+          rm -f /sapmnt/hosts
+  - name: stopInstance
+    action: aws:changeInstanceState
+    timeoutSeconds: 600
+    nextStep: startInstance
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DesiredState: stopped
+  - name: startInstance
+    action: aws:changeInstanceState
+    timeoutSeconds: 600
+    nextStep: InstallJq
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DesiredState: running
+  - name: InstallJq
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: RunPreScripts
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "installing jq..." >> ${LOGFILE} 2>&1
+          source /etc/os-release
+
+          if [[ ${ID} == "sles" ]]; then
+          zypper install -y jq
+          else
+          yum install -y jq
+          fi
+  - description: Run Pre Scripts
+    name: RunPreScripts
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 300
+    nextStep: AdjustFileSystems
+    isCritical: false
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "executing pre scripts..." >> ${LOGFILE} 2>&1
+
+          scripts='{{ GetConfigurationScripts.Output }}'
+          for row in $(echo ${scripts} | jq -r '.preConfigurationScripts.configurationScripts' | jq -r '.[] | @base64'); do
+            _jq() {
+              echo ${row} | base64 --decode | jq -r ${1}
+            }
+            s3_path=$(_jq '.s3URL')
+            s3_filename=$(basename ${s3_path})
+            local_file_path=${WORKDIR}/${s3_filename}
+            aws s3 cp ${s3_path} ${local_file_path}
+            echo "executing ${local_file_path}. Log will be written to  ${local_file_path}.log..." >> ${LOGFILE} 2>&1
+            bash ${local_file_path} > ${local_file_path}.log 2>&1
+            if [[ $? -ne 0 ]]; then
+              if [[ $(echo ${scripts} | jq -r '.preConfigurationScripts.onFailureBehaviour') != "CONTINUE" ]]; then
+                echo "executing ${local_file_path} returned error. check logfile ${local_file_path}.log...exiting..." >> ${LOGFILE} 2>&1
+                exit 1
+              fi
+            fi
+          done
+  - description: Adjust file systems accordingly
+    name: AdjustFileSystems
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 600
+    nextStep: RunPostScripts
+    isEnd: false
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash 
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "modifying files to create new instance..." >> ${LOGFILE} 2>&1
+          echo "#!/bin/bash "                    > ${WORKDIR}/AdjustFileSystems.sh
+          echo "# Error handling "              >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "set -eu "             >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "trap 'errorout \$?' ERR "       >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "errorout() { "                  >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "  echo \"exiting with \$?...\"" >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "} "                             >> ${WORKDIR}/AdjustFileSystems.sh
+
+          echo "# derive from parent CFN stack ">> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sap_sid=\$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query \"Stacks[*].Parameters[?ParameterKey=='SAPSID'].ParameterValue\" --region {{global:REGION}} --output text)"      >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sid_upper=\$(echo \${sap_sid} | tr '[[:lower:]]' '[[:upper:]]')"                                              >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sid_lower=\$(echo \${sap_sid} | tr '[[:upper:]]' '[[:lower:]]')"                                              >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "siadadm=\${sid_lower}adm"                                                                                     >> ${WORKDIR}/AdjustFileSystems.sh
+
+          echo "old_hostname=\$(basename /usr/sap/\${sid_upper}/home/.sapenv_*.sh | cut -d '_' -f2 | cut -d'.' -f1)"          >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "old_instance_num=\$(ls /usr/sap/\${sid_upper}/ | grep ^D[0-9][0-9] | cut -c2,3)"                              >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "old_instance_profile_file=\${sid_upper}_D\${old_instance_num}_\${old_hostname}"                               >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "old_instance_profile_full_path=/sapmnt/\${sid_upper}/profile/\${old_instance_profile_file}"                   >> ${WORKDIR}/AdjustFileSystems.sh
+
+          echo "new_hostname={{ AasHostname }}"                                                                              >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "new_instance_num={{ AasInstanceNr }}"                                                                        >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "new_instance_profile_file=\${sid_upper}_D\${new_instance_num}_\${new_hostname}"                               >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "new_instance_profile_full_path=/sapmnt/\${sid_upper}/profile/\${new_instance_profile_file}"                   >> ${WORKDIR}/AdjustFileSystems.sh
+
+          echo "echo \"kill in all orphaned processes...\""                                                                   >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "ps -ef | grep hostctrl | grep -v grep | awk '{print \"kill -9 \" \$2}' | sh"                                  >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "ps -ef | grep sapstartsrv | grep -v grep | awk '{print \"kill -9 \" \$2}' | sh"                               >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "ps -ef | grep saphostexec | grep -v grep | awk '{print \"kill -9 \" \$2}' | sh"                               >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "ps -ef | grep D\${old_instance_num} | grep -v grep | awk '{print \"kill -9 \" \$2}' | sh"                     >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"removing /tmp/.sapstream files...\""                                                                   >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "rm -rf /tmp/.sapstream*"                                                                                      >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "rm -f /usr/sap/sapservices"                                                                                   >> ${WORKDIR}/AdjustFileSystems.sh 
+          echo "rm -rf /usr/sap/\${sid_upper}/ASCS*"                                                                          >> ${WORKDIR}/AdjustFileSystems.sh 
+          echo "while [[ ! -d /sapmnt/\${sid_upper}/profile ]]; do"                                                           >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "    sleep 10"                                                                                                 >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "done"                                                                                                         >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"renaming files in home directory...\""                                                                 >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "for file in /usr/sap/\${sid_upper}/home/.*\${old_hostname}*; do "                                             >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "    mv \"\${file}\" \"\$(echo \${file} | sed \"s/\${old_hostname}/\${new_hostname}/\")\""                     >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "done"                                                                                                         >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"creating new profile file...\""                                                                        >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "cp -rp \${old_instance_profile_full_path} \${new_instance_profile_full_path}"                                 >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sed -i.bak \"s/\${old_hostname}/\${new_hostname}/g\" \${new_instance_profile_full_path}"                      >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sed -i.bak \"s/D\${old_instance_num}/D\${new_instance_num}/g\" \${new_instance_profile_full_path}"            >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sed -i.bak \"s/^SAPSYSTEM =.*/SAPSYSTEM = \${new_instance_num}/g\" \${new_instance_profile_full_path}"        >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "if [[ \${old_instance_num} != \${new_instance_num} ]]; then"                                                  >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "  mv /usr/sap/\${sid_upper}/D\${old_instance_num} /usr/sap/\${sid_upper}/D\${new_instance_num}"               >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "fi"                                                                                                           >> ${WORKDIR}/AdjustFileSystems.sh
+
+          # MT: Copy HDB UserStore
+          echo "su - \${siadadm} -c \"cp /usr/sap/\${sid_upper}/home/.hdb/\${old_hostname} /usr/sap/\${sid_upper}/home/.hdb/\${new_hostname} -R \""             >> ${WORKDIR}/AdjustFileSystems.sh
+
+          echo "/usr/sap/hostctrl/exe/saphostexec pf=/usr/sap/hostctrl/exe/host_profile"                                      >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "cd /usr/sap/hostctrl/exe/"                                                                                    >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"registering sapservices...\""                                                                          >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "/usr/sap/hostctrl/exe/sapstartsrv pf=/usr/sap/\${sid_upper}/SYS/profile/\${new_instance_profile_file} -reg"   >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"starting services...\""                                                                                >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "su - \${siadadm} -c \"sapcontrol -nr \${new_instance_num} -function StartService \${sid_upper}\""             >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "sleep 10"                                                                                                     >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "echo \"starting instance...\""                                                                                >> ${WORKDIR}/AdjustFileSystems.sh
+          echo "su - \${siadadm} -c \"sapcontrol -nr \${new_instance_num} -function Start\""                                  >> ${WORKDIR}/AdjustFileSystems.sh
+          bash ${WORKDIR}/AdjustFileSystems.sh  | tee -a ${LOGFILE}
+
+          # MT: Output
+          sleep 60
+          su - ${siadadm} -c "sapcontrol -nr ${new_instance_num} -function GetProcessList"
+  - description: Run Post Scripts
+    name: RunPostScripts
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 300
+    isCritical: false
+    isEnd: true
+    onCancel: step:DeleteOnFailure
+    onFailure: step:DeleteOnFailure
+    inputs:
+      InstanceIds:
+        - '{{ GetInstanceId.Output }}'
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash 
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "executing post scripts..." >> ${LOGFILE} 2>&1
+
+          scripts='{{ GetConfigurationScripts.Output }}'
+          for row in $(echo ${scripts} | jq -r '.postConfigurationScripts.configurationScripts' | jq -r '.[] | @base64'); do
+            _jq() {
+              echo ${row} | base64 --decode | jq -r ${1}
+            }
+            s3_path=$(_jq '.s3URL')
+            s3_filename=$(basename ${s3_path})
+            local_file_path=${WORKDIR}/${s3_filename}
+            aws s3 cp ${s3_path} ${local_file_path}
+            echo "executing ${local_file_path}. Log will be written to  ${local_file_path}.log..." >> ${LOGFILE} 2>&1
+            bash ${local_file_path} > ${local_file_path}.log 2>&1
+            if [[ $? -ne 0 ]]; then
+              if [[ $(echo ${scripts} | jq -r '.postConfigurationScripts.onFailureBehaviour') != "CONTINUE" ]]; then
+                echo "executing ${local_file_path} returned error. check logfile ${local_file_path}.log...exiting..." >> ${LOGFILE} 2>&1
+                exit 1
+              fi
+            fi
+          done
+  - name: DeleteOnFailure
+    action: aws:branch
+    isEnd: true
+    inputs:
+      Choices:
+        - NextStep: FailurePostProcessing
+          Variable: '{{ DisableDeploymentRollback }}'
+          StringEquals: 'False'
+  - description: 'Failure case and cleanup activities are done in this step '
+    name: FailurePostProcessing
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 60
+    nextStep: DeleteAASNodeStack
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # Create temp working directory
+          mkdir -p /root/install/add-aas-node/{{ SetActionId.Output }}
+          WORKDIR=/root/install/add-aas-node/{{ SetActionId.Output }}
+          LOGFILE=${WORKDIR}/addnode.log
+
+          echo "cleaning up node entries from pas server..." >> ${LOGFILE} 2>&1
+
+          # body
+          # remove entry from /etc/exports
+          echo "cleaning up /etc/exports pas server..." >> ${LOGFILE} 2>&1
+          sed -i.bak'/{{ AasHostname }}/d' /etc/exports
+          exportfs -a
+
+          # remove entry from /etc/hosts 
+          echo "cleaning up /etc/hosts from pas server..." >> ${LOGFILE} 2>&1
+          sed -i.bak '/{{ AasHostname }}/d' /etc/hosts
+
+          # remove profile file from /sapmnt/[SID]/profile
+          sap_sid=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPSID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          sid_upper=$(echo ${sap_sid} | tr '[[:lower:]]' '[[:upper:]]')
+          echo "cleaning up /sapmnt/${sid_upper}/profile directory..." >> ${LOGFILE} 2>&1
+          rm -f /sapmnt/${sid_upper}/profile/${sid_upper}*{{ AasHostname }}
+  - description: Delete AAS node CFN stack
+    name: DeleteAASNodeStack
+    action: aws:deleteStack
+    isEnd: true
+    inputs:
+      StackName: '{{ CreateCfnStackName.Output }}'
+outputs:
+  - AdjustFileSystems.Output

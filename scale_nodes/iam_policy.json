@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "launchwizard:listdeployments",
+                "cloudformation:describestacks",
+                "cloudformation:describestackresources",
+                "ec2:describeinstances"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "SecretsManager",
+            "Effect": "Allow",
+            "Action": ["secretsmanager:GetSecretValue"],
+            "Resource": "arn:aws:secretsmanager:*:*:secret:LaunchWizard-*-GlobalPassword"
+        }
+    ]
+}

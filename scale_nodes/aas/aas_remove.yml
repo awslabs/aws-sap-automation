@@ -1,0 +1,149 @@
+schemaVersion: '0.3'
+description: Delete an existing additional SAP Application Server (AAS) deployed through extension script
+parameters:
+  PasInstanceId:
+    allowedPattern: ^i-[a-z0-9]{17}$
+    default: i-abcdefg1234567890
+    description: (Required) Instance ID of the PAS node.
+    type: String
+  AasHostname:
+    allowedPattern: ^[a-z0-9-]+$
+    default: examplenode02
+    description: (Required) Hostname of the AAS  node to be deleted.
+    maxChars: 13
+    type: String
+mainSteps:
+  - name: RefreshHostListFromPas
+    description: Refresh /etc/hosts from PAS server
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetParentDeploymentName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          cp /etc/hosts /sapmnt/hosts
+          sleep 30
+  - name: GetParentDeploymentName
+    action: aws:runCommand
+    nextStep: GetCfnStackName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          parentDeploymentName=$(aws ec2 describe-instances --instance-ids {{ PasInstanceId }} --query 'Reservations[*].Instances[*].Tags[?Key==`aws:cloudformation:stack-name`].Value' --region {{global:REGION}} --output text)
+
+          if [ -z "$parentDeploymentName" ]; then
+            echo "Failed to get parent deployment ID."
+            exit 1
+          fi
+
+          echo -n $parentDeploymentName
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetCfnStackName
+    action: aws:runCommand
+    nextStep: GetDeleteNodeInstanceId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          ## Set CFN stack name for execution
+          cfnStackName={{ GetParentDeploymentName.Output }}-{{ AasHostname }}
+          echo -n $cfnStackName
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+  - name: GetDeleteNodeInstanceId
+    description: Get AAS Node instance ID that is getting deleted
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: UpdateEtcHosts
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          aws cloudformation describe-stack-resources --stack-name {{ GetCfnStackName.Output }} --query 'StackResources[?ResourceType==`AWS::EC2::Instance`].PhysicalResourceId' --region {{global:REGION}} --output text | tr -d '\n'
+  - name: UpdateEtcHosts
+    description: Refresh /etc/hosts from PAS server
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 60
+    nextStep: CleanEntriesFromPas
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{GetDeleteNodeInstanceId.Output}}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          fgrep -vxf /etc/hosts /sapmnt/hosts >>/etc/hosts || true
+          rm -f /sapmnt/hosts
+  - name: CleanEntriesFromPas
+    description: Cleanup the AAS node entries from PAS server
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: DeleteAASNodeStack
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ PasInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # remove entry from /etc/exports
+          sed -i '/{{ AasHostname }}/d' /etc/exports
+          exportfs -a
+
+          # remove entry from /etc/hosts 
+          sed -i '/{{ AasHostname }}/d' /etc/hosts
+
+          # remove profile file from /sapmnt
+          sap_sid=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPSID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          if [ ! -z "${sap_sid}" ]; then
+            find /sapmnt/${sap_sid}/profile -type f -name "*{{ AasHostname }}*" | awk '{print "rm -f "$1}' | sh
+          fi
+  - name: DeleteAASNodeStack
+    description: Delete AAS node CFN stack
+    action: aws:deleteStack
+    isEnd: true
+    inputs:
+      StackName: '{{ GetCfnStackName.Output }}'

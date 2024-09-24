@@ -1,0 +1,196 @@
+schemaVersion: '0.3'
+description: Delete HANA Standby node
+parameters:
+  HanaPrimaryInstanceId:
+    allowedPattern: ^i-[a-z0-9]{17}$
+    default: i-abcdefg1234567890
+    description: (Required) Instance ID of the primary HANA node.
+    type: String
+  HanaDbStandbyHostname:
+    allowedPattern: ^[a-z0-9-]+$
+    default: standby03
+    description: (Required) Hostname of the HANA standby node to be deleted.
+    maxChars: 13
+    type: String
+mainSteps:
+  - name: RefreshHostListFromMaster
+    description: Refresh /etc/hosts from HANA master server
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: GetParentDeploymentName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          cp /etc/hosts /hana/shared/hosts
+          sleep 30
+  - name: GetParentDeploymentName
+    action: aws:runCommand
+    nextStep: GetCfnStackName
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          parentDeploymentName=$(aws ec2 describe-instances --instance-ids {{ HanaPrimaryInstanceId }} --query 'Reservations[*].Instances[*].Tags[?Key==`aws:cloudformation:stack-name`].Value' --region {{global:REGION}} --output text)
+
+          if [ -z "$parentDeploymentName" ]; then
+            echo "Failed to get parent deployment ID."
+            exit 1
+          fi
+
+          echo -n $parentDeploymentName
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetCfnStackName
+    action: aws:runCommand
+    nextStep: GetDeleteNodeInstanceId
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          ## Set CFN stack name for execution
+          cfnStackName={{ GetParentDeploymentName.Output }}-{{ HanaDbStandbyHostname }}
+          echo -n $cfnStackName
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+  - name: GetDeleteNodeInstanceId
+    description: Get HANA Standby Node instance id that is getting deleted
+    action: aws:runCommand
+    maxAttempts: 3
+    timeoutSeconds: 60
+    nextStep: UpdateEtcHosts
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          instance_id=$(aws cloudformation describe-stack-resources --stack-name {{ GetCfnStackName.Output }} --query 'StackResources[?ResourceType==`AWS::EC2::Instance`].PhysicalResourceId' --region {{global:REGION}} --output text | tr -d '\n')
+          instance_state=$(aws ec2 describe-instance-status --instance-id ${instance_id} --query 'InstanceStatuses[].InstanceState.Name' --region {{global:REGION}} --output text | tr -d '\n')
+
+          if [[ ${instance_state} == "running" ]]; then
+            echo -n ${instance_id}
+          else
+            echo "instance ${instance_id} is not running or not available"
+            exit 8
+          fi
+  - name: UpdateEtcHosts
+    description: Refresh /etc/hosts from HANA master server
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 60
+    nextStep: CheckAndDeleteHANAStandby
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{GetDeleteNodeInstanceId.Output}}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          fgrep -vxf /etc/hosts /hana/shared/hosts >>/etc/hosts || true
+          rm -f /hana/shared/hosts 
+  - name: CheckAndDeleteHANAStandby
+    description: Get HANA Standby Node hostname to be deleted
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 600
+    nextStep: CleanEntriesFromHanaMaster
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{GetDeleteNodeInstanceId.Output}}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          hana_sid=$(aws cloudformation describe-stacks --stack-name  {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='HANASID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          hana_sid_lower=$(echo "$hana_sid" | tr '[:upper:]' '[:lower:]')
+
+          hana_instance_num=$(aws cloudformation describe-stacks --stack-name  {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPInstanceNum'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+          hana_host_status=$(su - ${hana_sid_lower}adm -c "python /usr/sap/${hana_sid}/HDB${hana_instance_num}/exe/python_support/landscapeHostConfiguration.py --localhost --sapcontrol=1 | grep hostActive | grep -v grep | cut -d \"=\" -f2 | perl -pe \"chomp\"")
+
+          if [[ $hana_host_status == "yes" ]]; then
+              echo "node status is active. Attempting to delete..."
+              /hana/shared/${hana_sid}/hdblcm/hdblcm --action=remove_hosts --removehosts={{ HanaDbStandbyHostname }} --keep_user_home_dir --keep_user --batch || true
+              /hana/shared/${hana_sid}/hdblcm/hdblcm --action=remove_hosts --removehosts={{ HanaDbStandbyHostname }} --keep_user_home_dir --keep_user --batch || true
+
+              if [[ $? -ne 0 ]]; then 
+                echo "Error deleting Standby node. check hdblcm logs in /var/tmp"
+                exit 8
+              fi
+          fi
+  - name: CleanEntriesFromHanaMaster
+    description: Cleanup HANA Standby host entries entries from HANA Master server
+    action: aws:runCommand
+    maxAttempts: 1
+    timeoutSeconds: 60
+    nextStep: DeleteHANAStandbyNodeStack
+    isEnd: false
+    inputs:
+      DocumentName: AWS-RunShellScript
+      InstanceIds:
+        - '{{ HanaPrimaryInstanceId }}'
+      Parameters:
+        commands: |-
+          #!/bin/bash
+
+          # Error handling
+          set -eu
+          trap 'ReturnCode=$?; echo >&2 "$0: Error on line "$LINENO": $BASH_COMMAND"; exit $ReturnCode' ERR
+
+          # remove entry from /etc/hosts 
+          sed -i '/{{ HanaDbStandbyHostname }}/d' /etc/hosts
+
+          # remove entries from /usr/sap/[SID]/SYS/profile
+          hana_sid=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='HANASID'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+
+          if [ ! -z "${hana_sid}" ]; then
+            find /usr/sap/${hana_sid}/SYS/profile/ -type f -name "*{{ HanaDbStandbyHostname }}" | awk '{print "rm -f "$1}' | sh
+          fi
+
+          # remove directory /usr/sap/[SID]/HDB00/[hostname]
+          hana_instance_num=$(aws cloudformation describe-stacks --stack-name {{ GetParentDeploymentName.Output }} --query "Stacks[*].Parameters[?ParameterKey=='SAPInstanceNum'].ParameterValue" --region {{global:REGION}} --output text | tr -d '\n')
+
+          if [ ! -z "${hana_instance_num}" ]; then
+            rm -rf /usr/sap/${hana_sid}/HDB${hana_instance_num}/{{ HanaDbStandbyHostname }}
+          fi
+  - name: DeleteHANAStandbyNodeStack
+    description: Delete HANA Standby node CFN stack
+    action: aws:deleteStack
+    isEnd: true
+    inputs:
+      StackName: '{{ GetCfnStackName.Output }}'
