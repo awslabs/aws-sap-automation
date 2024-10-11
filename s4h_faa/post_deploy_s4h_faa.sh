@@ -25,7 +25,7 @@ sudo su -
 home_dir="/root/install"
 s4h_faa_dir="$home_dir/s4h_faa"
 post_deploy_log="$home_dir/post_deploy.log"
-install_package_zip="https://github.com/awslabs/aws-sap-automation/blob/main/s4h_faa/s4h_faa_package.zip"
+install_package_zip="https://github.com/awslabs/aws-sap-automation/raw/refs/heads/main/s4h_faa/s4h_faa_package.zip"
 
 
 cd $home_dir
