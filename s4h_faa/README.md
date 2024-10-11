@@ -69,6 +69,8 @@ Certain key parameters to be configured -
 
 The deployment is expected to take around 60 to 90 minutes. You can monitor the progress by checking the deployment log at **"/root/install/post_deploy.log"**. Once the deployment is complete, the log will display the SAP system details including master password.
 
+![SAP System Details](static/images/s4h_faa_metadata.png)
+
 ## Troubleshooting
 
 Each deployment in your account in the same AWS Region can be uniquely identified by the application name specified at the time of a deployment. The application name can be used to view the details related to the application launch. Please refer the [Troubleshoot AWS Launch Wizard for SAP](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-troubleshooting.html) user guide for detailed troubleshooting options.
