@@ -1,4 +1,4 @@
-# Automated installtion of SAP S/4HANA Fully-Activated Appliance (FAA) using AWS Launch Wizard (LW)
+# Automated installation of SAP S/4HANA Fully-Activated Appliance (FAA) using AWS Launch Wizard (LW)
 
 Installs an SAP S/4HANA Fully-Activated Appliance (FAA) running on an Amazon EC2 instance deployed using AWS Launch Wizard
 
