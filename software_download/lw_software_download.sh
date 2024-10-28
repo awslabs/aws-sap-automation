@@ -427,6 +427,7 @@ do
     fi
 
     #TODO DELETE OLD SWPM FILES & KERNEL
+    #aws s3 rm s3://x.y.z/ --recursive --exclude "*" --include "*"
  
     WGET_RC=""
     FAILED_CHECKSUM_RETRIES=0
