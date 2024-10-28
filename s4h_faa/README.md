@@ -8,7 +8,8 @@ Installs an SAP S/4HANA Fully-Activated Appliance (FAA) running on an Amazon EC2
 
 ## Prerequisites (Once only)
 
-- The SAP S/4HANA Fully-Activated Appliance 2023 FPS00 installation media and the SWPM are stored in an S3 bucket.
+- A VPC which can be used for the EC2 instance deployment has to be existent. 
+- The SAP S/4HANA Fully-Activated Appliance 2023 FPS00 installation media and the SWPM must be stored in an S3 bucket (instructions see below).
 - The default EBS volumes provisioned by Launch Wizard are not appropriately sized for an S/4HANA FAA installation. During the installation, the package increases the size of these volumes to accommodate the storage requirements for data, logs, and media of the FAA system. To enhance performance and reduce provisioning time, it also boosts throughput and IOPS, which can be manually scaled down after the installation. Attach the provided [IAM Policy](iam_s4h_faa_policy.json) to the **AmazonEC2RoleForLaunchWizard** role to grant the *ec2:ModifyVolume* permission.
 
 For detailed instructions on setting up IAM for AWS Launch Wizard for SAP, refer to the [user guide](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-setting-up.html#launch-wizard-sap-iam)
@@ -32,7 +33,7 @@ Set up an AWS S3 bucket with the prefix *launchwizard-\** and create three folde
 
 ### Prepare the necessary files
 
-1. Download the [SAP S/4HANA 2023 FPS00 FAA](https://me.sap.com/softwarecenter/template/products/_APP=00200682500000001943&_EVENT=DISPHIER&HEADER=Y&FUNCTIONBAR=N&EVENT=TREE&NE=NAVIGATE&ENR=73554900100900005332&V=INST) installation media from [SAP Software Download Center](https://support.sap.com/en/my-support/software-downloads.html) using your SAP s-user id and upload to *exports* S3 bucket folder
+1. Download the [SAP S/4HANA 2023 FPS00 FAA](https://me.sap.com/softwarecenter/template/products/_APP=00200682500000001943&_EVENT=DISPHIER&HEADER=Y&FUNCTIONBAR=N&EVENT=TREE&NE=NAVIGATE&ENR=73554900100900005332&V=INST) installation media from [SAP Software Download Center](https://support.sap.com/en/my-support/software-downloads.html) using your SAP S-User ID and upload to *exports* S3 bucket folder
 
 ![S4H FAA Export](static/images/s4h_faa_files.png)
 
@@ -62,10 +63,10 @@ These parameters are predefined in the FAA installation and become available at 
 Refer to the user guide on [Deploying an SAP application with AWS Launch Wizard](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-deploying.html) to set up an **infrastructure-only single-system SAP deployment**. Additionally, ensure that the *post_deploy_s4h_faa.sh* script is included in the post-deployment configuration scripts section. The FAA installation package supports LW deployment options via both the Console and AWS CLI.
 
 Certain key parameters to be configured -
-- **Application type -** Netweaver stack on HANA database
-- **Deployment model -** Single instance deployment
-- **Instance type -** r6i.4xlarge
-- **SAP application & HANA installation -** No
+- **Application type:** Netweaver stack on HANA database
+- **Deployment model:** Single instance deployment
+- **Instance type:** r6i.4xlarge
+- **SAP application & HANA installation:** No
 
 The deployment is expected to take around 60 to 90 minutes. You can monitor the progress by checking the deployment log at **"/root/install/post_deploy.log"**. Once the deployment is complete, the log will display the SAP system details including master password.
 
