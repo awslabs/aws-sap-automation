@@ -9,6 +9,7 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 | **[Custom Tags](tagging/)** | Adds a set of predefined custom tags to all AWS Launch Wizard for SAP deployment resources |
 | **[AWS SDK for SAP ABAP installer](abapsdk/)** | Downloads and copies required artifacts to usr/sap/trans. Imports core transport. |
 | **[Horizontal Scaling](scale_nodes/)** | Add additional nodes to a preexisting SAP application deployed with AWS Launch Wizard for SAP |
+| **[SAP S/4HANA Fully-Activated Appliance (FAA)](s4h_faa/)** | Automated installation of the SAP S/4HANA Fully-Activated Appliance (FAA) through AWS Launch Wizard |
 
 [![SAP software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) <br>
 [![s4hanafoundations-2022](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2022.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2022.yml) <br>

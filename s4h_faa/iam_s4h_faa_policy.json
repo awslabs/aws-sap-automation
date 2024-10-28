@@ -1,0 +1,15 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "s4hfaa",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:ModifyVolume"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
