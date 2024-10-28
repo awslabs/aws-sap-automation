@@ -1,4 +1,4 @@
-# AWS Systems Manager for SAP Registration
+# AWS Systems Manager for SAP Registration (RETIRED)
 
 Registers SAP HANA database and/or SAP ABAP Application Server **single-node** deployments as part of Launch Wizard for SAP (LW4SAP) with [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html) (SSM4SAP).
 
