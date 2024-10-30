@@ -14,6 +14,10 @@ s4h_faa_exports="<S3_URI_EXPORTS>"
 # Example: s3://bucket-name/s4hana/2023_FPS00_FAA/swpm
 s4h_swpm="<S3_URI_SWPM>"
 
+# S/4 Fully-Activated Appliance Version (Release + Feature Pack Stack Version)
+# Example: 2023_FPS00 | Only "2023_FPS00" is supported by the installation package as of now
+s4h_version="2023_FPS00"
+
 ##########################################################################################
 
 
@@ -48,6 +52,6 @@ chmod -R 775  ${s4h_faa_dir}
 rm ${s4h_faa_dir}/._*
 rm -f  ${home_dir}/s4h_faa.zip
 
-${s4h_faa_dir}/s4h_faa_install.sh ${s4h_faa_exports} ${s4h_swpm}
+${s4h_faa_dir}/s4h_faa_install.sh ${s4h_faa_exports} ${s4h_swpm} ${s4h_version}
 echo "$(date +%Y-%m-%d_%H:%M:%S)......Post deployment script execution complete" >> $post_deploy_log
 echo "==================================================" >> $post_deploy_log
