@@ -68,7 +68,7 @@ Certain key parameters to be configured -
 - **Instance type:** r6i.4xlarge
 - **SAP application & HANA installation:** No
 
-The deployment is expected to take around 60 to 90 minutes. You can monitor the progress by checking the deployment log at **"/root/install/post_deploy.log"**. Once the deployment is complete, the log will display the SAP system details including master password.
+The deployment is expected to take around 60 to 90 minutes. You can monitor the progress by checking the deployment log at **"/root/install/post_deploy.log"**. Once the deployment is complete, the log will display SAP system details including the password.
 
 ![SAP System Details](static/images/s4h_faa_metadata.png)
 
