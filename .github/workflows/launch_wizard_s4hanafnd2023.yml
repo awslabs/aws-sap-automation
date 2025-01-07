@@ -1,5 +1,5 @@
-# SAP S/4HANA Foundation 2022 / SAP HANA / RHEL4SAP 8.6 / eu-central-1 / Runs bi-weekly / SAP Software Download & SSM for SAP & ABAP SDK
-name: 'S/4HANA FND 2022 (RHEL4SAP8.6)_'
+# SAP S/4HANA Foundation 2023 / SAP HANA / RHEL4SAP 8.6 / FSX ONTAP / eu-central-1 / Runs bi-weekly / SAP Software Download
+name: 'S/4HANA FND 2023 (RHEL4SAP8.6/Distributed)_'
 
 # Controls when the workflow will run
 on:
@@ -38,9 +38,9 @@ jobs:
           sudo ./aws/install --update
           aws --version
           MyTimestamp=$(date +%s)
-          StackName=S4FND22T$MyTimestamp
-          echo ${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2022 }} > stack.json
-          DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
+          StackName=S4FND23T$MyTimestamp
+          echo ${{ secrets.STACK_SAPS4HANAFOUNDATIONS_2023 }} > stack.json
+          DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaMulti" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
           sleep 10s
           echo "Deployment started: "$DEPLOYMENT_ID
           until [ $(aws launch-wizard get-deployment --deployment-id $DEPLOYMENT_ID --output text --query 'deployment.status') = *"IN_PROGRESS"* ];

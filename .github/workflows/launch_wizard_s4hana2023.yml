@@ -1,5 +1,5 @@
-# SAP S/4HANA 2022 / SAP HANA / SLES15 SP4 / eu-central-1 / Runs bi-weekly / SAP Software Download & SSM for SAP
-name: 'S/4HANA 2022 (SLES15SP4)_'
+# SAP S/4HANA 2023 / SAP HANA / SLES15 SP5 / eu-central-1 / Runs bi-weekly / SAP Software Download
+name: 'S/4HANA 2023 (SLES15SP5)_'
 
 # Controls when the workflow will run
 on:
@@ -39,7 +39,7 @@ jobs:
           aws --version
           MyTimestamp=$(date +%s)
           StackName=S422T$MyTimestamp
-          echo ${{ secrets.STACK_SAPS4HANA_2022 }} > stack.json
+          echo ${{ secrets.STACK_SAPS4HANA_2023 }} > stack.json
           DEPLOYMENT_ID=$(aws launch-wizard create-deployment --specifications file://stack.json --deployment-pattern-name "SapNWOnHanaSingle" --name $StackName --workload-name "SAP" --output text --query 'deploymentId')
           sleep 10s
           echo "Deployment started: "$DEPLOYMENT_ID
