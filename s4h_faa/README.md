@@ -49,6 +49,8 @@ Set up an AWS S3 bucket with the prefix *launchwizard-\** and create three folde
 4. Modify the deployment script to set the required parameters -
 - *s4h_faa_exports* - S3 URI path for S/4HANA fully-activated appliance .ZIP exports
 - *s4h_swpm* - S3 URI path for SWPM .SAR file
+- *s4h_swpm* - S3 URI path for SWPM .SAR file
+- *s4h_version* - SAP S/4 Fully-Activated Appliance version to be provisioned
 
 5. Upload the modified script to *post_deploy* S3 bucket folder
 
