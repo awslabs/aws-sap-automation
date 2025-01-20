@@ -50,7 +50,6 @@ jobs:
           ./software_download/lw_software_download.sh validate sapNetweaver-752
           ./software_download/lw_software_download.sh validate sapbw4hana-2021
           ./software_download/lw_software_download.sh validate sapbw4hana-2.0
-          ./software_download/lw_software_download.sh validate saps4hana-1909
           ./software_download/lw_software_download.sh validate saps4hana-2020
           ./software_download/lw_software_download.sh validate saps4hana-2021
           ./software_download/lw_software_download.sh validate saps4hana-2022
