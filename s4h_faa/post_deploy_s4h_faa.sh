@@ -2,6 +2,7 @@
 
 # AWS Launch Wizard for SAP - Post Deployment Script to install S/4HANA Fully-activated Appliance (FAA) 
 # Please choose LW infrastructure deployment only without SAP installation
+# version - 2.0
 
 
 ######### Please set the installation parameters below #########
@@ -15,14 +16,15 @@ s4h_faa_exports="<S3_URI_EXPORTS>"
 s4h_swpm="<S3_URI_SWPM>"
 
 # S/4 Fully-Activated Appliance Version (Release + Feature Pack Stack Version)
-# Example: 2023_FPS00 | Only "2023_FPS00" is supported by the installation package as of now
-s4h_version="2023_FPS00"
+# Example: 2023_FPS00
+# Supported Versions: 2023_FPS00 | 2023_FPS02
+s4h_version="<S4H_FAA_VERSION>"
 
 ##########################################################################################
 
 
 
-#========= /// Do not modify the script below below /// =========#
+#========= /// DO NOT modify the script below /// =========#
 
 sudo su -
 
@@ -38,9 +40,9 @@ touch $post_deploy_log
 echo "==================================================" >> $post_deploy_log
 echo "$(date)" >> $post_deploy_log
 echo " " >> $post_deploy_log
-echo "Log file $post_deploy_log successfully created for SAP S/4HANA Fully-Activated Appliance installation process" >> $post_deploy_log
+echo "Log file $post_deploy_log successfully created for SAP S/4HANA $s4h_version Fully-Activated Appliance (FAA) installation process" >> $post_deploy_log
 echo " " >> $post_deploy_log
-echo "$(date +%Y-%m-%d_%H:%M:%S)......Downloading SAP S/4HANA Fully-Activated Appliance automated installation package from github..." >> $post_deploy_log
+echo "$(date +%Y-%m-%d_%H:%M:%S)......Downloading AWS for SAP S/4HANA FAA automated installation package from github..." >> $post_deploy_log
 
 until [[ -f ${home_dir}/s4h_faa.zip ]];do
 	wget ${install_package_zip} -O s4h_faa.zip || true
@@ -53,5 +55,4 @@ rm ${s4h_faa_dir}/._*
 rm -f  ${home_dir}/s4h_faa.zip
 
 ${s4h_faa_dir}/s4h_faa_install.sh ${s4h_faa_exports} ${s4h_swpm} ${s4h_version}
-echo "$(date +%Y-%m-%d_%H:%M:%S)......Post deployment script execution complete" >> $post_deploy_log
 echo "==================================================" >> $post_deploy_log
