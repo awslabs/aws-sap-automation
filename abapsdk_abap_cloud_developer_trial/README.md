@@ -26,7 +26,7 @@ Please note that the SDK modules to be installed are defined in variable "tla_va
 tla_values=("core" "lmd" "sqs" "sns" "evb" "tex" "cpd" "xl8" "fcs" "loc" "cwl" "cwt" "cwe" "glu" "dbr" "dyn" "bdk" "bdr" "lr1" "lr2" "rek" "fcq")
 ```
 
-If you would like to add or remove transports, please edit the setup.sh file and simply adjust "tla_values". For a detailed description of each module in the AWS SDK for ABAP, refer to https://docs.aws.amazon.com/sdk-for-sap-abap/v1/api/latest/tla.html.	
+If you would like to add or remove transports, please edit the aws-sap-dockersetup.sh file and simply adjust "tla_values". For a detailed description of each module in the AWS SDK for ABAP, refer to https://docs.aws.amazon.com/sdk-for-sap-abap/v1/api/latest/tla.html.	
 
 ## Getting started
 
@@ -34,11 +34,11 @@ To execute the script, run the following command on OS level:
 
 ```bash
 cd /tmp
-wget https://raw.githubusercontent.com/awslabs/aws-sap-automation/refs/heads/main/abapsdk_abap_cloud_developer_trial/setup.sh
-chmod +x setup.sh
-./setup.sh docker_setup
+wget https://raw.githubusercontent.com/awslabs/aws-sap-automation/refs/heads/main/abapsdk_abap_cloud_developer_trial/aws-sap-dockersetup.sh
+chmod +x aws-sap-dockersetup.sh
+./aws-sap-dockersetup.sh docker_setup
 CONTAINER_ID=$(docker ps -q)
-docker exec -it $CONTAINER_ID sudo su - a4hadm -c '/tmp/setup.sh sap_setup'
+docker exec -it $CONTAINER_ID sudo su - a4hadm -c '/tmp/aws-sap-dockersetup.sh sap_setup'
 ```
 
 ## Troubleshooting
