@@ -1,8 +1,8 @@
 # AWS SDK for SAP ABAP installer for the SAP Cloud Developer Trial (Docker)
 
-Deploys the AWS SDK for ABAP on the ABAP Cloud Developer Trial docker instance.
+Deploys the AWS SDK for SAP ABAP on the [SAP ABAP Cloud Developer Trial @ Docker](https://hub.docker.com/r/sapse/abap-cloud-developer-trial).
 
-Check out https://hub.docker.com/r/sapse/abap-cloud-developer-trial for more details and also SAP's licensing terms.
+Check out https://hub.docker.com/r/sapse/abap-cloud-developer-trial for more details on this trial edition and also SAP's licensing terms.
 
 **Note:** This script has been tested with Amazon Linux 2023 only.
 
