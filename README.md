@@ -8,6 +8,7 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 | **[SSM for SAP](ssm_sap/) (RETIRED)** | Performs [AWS Systems Manager for SAP](https://docs.aws.amazon.com/ssm-sap/latest/userguide/get-started.html) registration for AWS Launch Wizard for SAP deployments |
 | **[Custom Tags](tagging/)** | Adds a set of predefined custom tags to all AWS Launch Wizard for SAP deployment resources |
 | **[AWS SDK for SAP ABAP installer](abapsdk/)** | Downloads and copies required artifacts to usr/sap/trans. Imports core transport. |
+| **[AWS SDK for SAP ABAP installer for SAP ABAP Cloud Developer Trial Edition](abapsdk_abap_cloud_developer_trial/)** | Downloads and copies required artifacts to usr/sap/trans. Imports core transport. |
 | **[Horizontal Scaling](scale_nodes/)** | Add additional nodes to a preexisting SAP application deployed with AWS Launch Wizard for SAP |
 | **[SAP S/4HANA Fully-Activated Appliance (FAA)](s4h_faa/)** | Automated installation of the SAP S/4HANA Fully-Activated Appliance (FAA) through AWS Launch Wizard |
 
