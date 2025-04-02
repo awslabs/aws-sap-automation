@@ -67,6 +67,7 @@ These parameters are predefined in the FAA installation and become available at 
 Refer to the user guide on [Deploying an SAP application with AWS Launch Wizard](https://docs.aws.amazon.com/launchwizard/latest/userguide/launch-wizard-sap-deploying.html) to set up an **infrastructure-only single-system SAP deployment**. Additionally, ensure that the *post_deploy_s4h_faa.sh* script is included in the post-deployment configuration scripts section. The FAA installation package supports LW deployment options via both the Console and AWS CLI. If you prefer AWS CLI, you can download the [sample JSON specification file](lwapi_s4h_faa.json) and customize it as per your needs before deployment.
 
 Certain key parameters to be configured -
+- **DNS:** DO NOT use domain while deploying and configure it afterwards
 - **Application type:** Netweaver stack on HANA database
 - **Transport Domain Controller:** No
 - **SAP Web Dispatcher:** Uncheck *"Add SAP Web Dispatcher for this SAP application"*
