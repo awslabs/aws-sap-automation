@@ -13,9 +13,6 @@ Collection of scripts, that can be used primarily with **AWS Launch Wizard for S
 | **[SAP S/4HANA Fully-Activated Appliance (FAA)](s4h_faa/)** | Automated installation of the SAP S/4HANA Fully-Activated Appliance (FAA) through AWS Launch Wizard |
 
 [![SAP software](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/software_download_all.yml) <br>
-[![s4hana-2023](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hana2023.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hana2023.yml) <br>
-[![solman72ase](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_solman72_ase.yml) <br>
-[![s4hanafoundations-2023-multi-fsx](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2023.yml/badge.svg)](https://github.com/awslabs/aws-sap-automation/actions/workflows/launch_wizard_s4hanafnd2023.yml) <br>
 
 ## Found an issue? Anything to add?
 
