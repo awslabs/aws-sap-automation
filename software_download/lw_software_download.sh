@@ -101,7 +101,7 @@ echo ""
 echo -n "Parsing Download Links"
 exec < "$DIR/../software_download/links.csv"
 read header
-while IFS=";" read -r ID column2 column3 URL column5 DESC MD5 remaining
+while IFS="," read -r ID column2 column3 URL column5 DESC MD5 remaining
 do
   #echo "$ID"
   #echo "$URL"
