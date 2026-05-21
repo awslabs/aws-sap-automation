@@ -3,6 +3,9 @@ name: Update SWPM to Latest
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-swpm:
     runs-on: ubuntu-latest
@@ -26,3 +29,10 @@ jobs:
           SAP_USER: ${{ secrets.SAP_USER }}
           SAP_PASSWORD: ${{ secrets.SAP_PASSWORD }}
         run: node update-swpm-to-latest.js
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ../../software_download/links.csv
+          git diff --cached --quiet || git commit -m "chore: update SWPM download links to latest" && git push
