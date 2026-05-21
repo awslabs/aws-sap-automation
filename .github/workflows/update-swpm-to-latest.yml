@@ -1,0 +1,28 @@
+name: Update SWPM to Latest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-swpm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: software_download/update-swpm-to-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Update SWPM to latest
+        env:
+          SAP_USER: ${{ secrets.SAP_USER }}
+          SAP_PASSWORD: ${{ secrets.SAP_PASSWORD }}
+        run: node update-swpm-to-latest.js

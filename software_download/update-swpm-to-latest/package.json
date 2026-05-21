@@ -1,0 +1,12 @@
+{
+  "name": "update-swpm-to-latest",
+  "version": "1.0.0",
+  "description": "Update SWPM 1.0 and 2.0 to latest versions from SAP Software Center",
+  "main": "update-swpm-to-latest.js",
+  "scripts": {
+    "update": "node update-swpm-to-latest.js"
+  },
+  "dependencies": {
+    "playwright": "1.52.0"
+  }
+}

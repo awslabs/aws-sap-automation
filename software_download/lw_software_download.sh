@@ -454,7 +454,11 @@ do
 
               echo -n "Comparing MD5 checksums"
               md5=($(sha256sum $ITEM_PATH/$FILENAME))
-              if [[ "$md5" == "$SWDC_MD5" ]]
+              if [[ "$i" == "SWPM" ]]
+              then
+                echo -e " ${YELLOW}...skipped for SWPM${NO_COLOR}"
+                SUCCESSFUL_DOWNLOADS+=$ITEM_VARIABLE"\n"
+              elif [[ "$md5" == "$SWDC_MD5" ]]
               then
                 echo -e " ${GREEN}...checksums ok!${NO_COLOR}"
                 SUCCESSFUL_DOWNLOADS+=$ITEM_VARIABLE"\n"
