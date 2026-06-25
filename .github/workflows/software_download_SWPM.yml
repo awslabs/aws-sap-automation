@@ -1,5 +1,5 @@
 #Runs daily
-name: SWPM
+name: heck all SAP SWPM Software Links
 
 # Controls when the workflow will run
 on:

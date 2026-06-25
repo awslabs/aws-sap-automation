@@ -1,5 +1,5 @@
 #Runs bi-weekly
-name: SAP Software Download
+name: Check all SAP Software Links
 
 # Controls when the workflow will run
 on:
